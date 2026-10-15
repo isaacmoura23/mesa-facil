@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Comandas, mesas, pagamentos (leitura) e fila de impressão — regras por papel e integridade.
  * (A concorrência — uma comanda aberta por mesa, order_number, pagamentos duplicados — está em
@@ -297,50 +298,69 @@ describe("pagamentos: quem vê e quem escreve", () => {
   });
 });
 
-describe("fila de impressão (print_jobs)", () => {
-  const body = (who: AccountKey, orderId: string, extra: Record<string, unknown> = {}) => ({
+describe("fila de impressão (print_jobs): só via RPC request_print (F-08 corrigido, mig. 0116)", () => {
+  const request = (who: AccountKey, orderId: string, type = "KITCHEN_TICKET") => as(who).rpc("request_print", { p_order: orderId, p_document_type: type });
+  const directBody = (who: AccountKey, orderId: string, extra: Record<string, unknown> = {}) => ({
     restaurant_id: A().id,
     document_type: "KITCHEN_TICKET",
     order_id: orderId,
     requested_by: world().users[who].id,
     printer_target: `zz-${uniq()}`,
+    payload: { forjado: true },
     ...extra,
   });
 
-  it("cozinha, caixa, garçom e gerente pedem impressão: nasce REQUESTED, nunca PRINTED", async () => {
+  it("cozinha, caixa, garçom e gerente pedem impressão via request_print: nasce REQUESTED, nunca PRINTED", async () => {
     const order = await makeOrder(cleanup, A().id);
     for (const who of ["kitchenA", "cashierA", "waiterA", "managerA"] as const) {
-      const res = await as(who).from("print_jobs").insert(body(who, order.id)).select("id,status,printed_at").single();
+      const res = await request(who, order.id);
       expectOk(res);
-      expect(res.data).toMatchObject({ status: "REQUESTED", printed_at: null });
+      expect(res.data).toMatchObject({ ok: true, status: "REQUESTED" });
+      const job = await admin().from("print_jobs").select("status,printed_at,requested_by,restaurant_id,order_id").eq("id", (res.data as any).job_id).single();
+      expect(job.data).toMatchObject({ status: "REQUESTED", printed_at: null, requested_by: world().users[who].id, restaurant_id: A().id, order_id: order.id });
     }
   });
 
-  it("não pode nascer PRINTED/DISPATCHED, em nome de outro, nem com timestamps ou erro forjados", async () => {
+  it("INSERT direto em print_jobs é negado a qualquer papel autenticado (F-08): nada é gravado", async () => {
     const order = await makeOrder(cleanup, A().id);
+    for (const who of ["kitchenA", "cashierA", "waiterA", "managerA", "ownerA"] as const) {
+      expectDenied(await as(who).from("print_jobs").insert(directBody(who, order.id)).select("id"));
+    }
+    // nem com status/timestamps/erro/solicitante forjados
     for (const extra of [
       { status: "PRINTED", printed_at: new Date().toISOString() },
       { status: "DISPATCHED", dispatched_at: new Date().toISOString() },
       { status: "FAILED", error_message: "x" },
-      { printed_at: new Date().toISOString() },
       { requested_by: world().users.managerA.id },
     ]) {
-      expectDenied(await as("cashierA").from("print_jobs").insert(body("cashierA", order.id, extra)).select("id"));
+      expectDenied(await as("cashierA").from("print_jobs").insert(directBody("cashierA", order.id, extra)).select("id"));
     }
     expect(rows(await admin().from("print_jobs").select("id").eq("order_id", order.id))).toHaveLength(0);
   });
 
-  it("dono não pede impressão; ninguém atualiza ou apaga jobs (status é do serviço de impressão)", async () => {
+  it("dono não pede impressão; ninguém atualiza ou apaga jobs diretamente (status só pelas RPCs)", async () => {
     const order = await makeOrder(cleanup, A().id);
-    expectDenied(await as("ownerA").from("print_jobs").insert(body("ownerA", order.id)).select("id"));
-    const job = await as("cashierA").from("print_jobs").insert(body("cashierA", order.id)).select("id").single();
+    expectDenied(await request("ownerA", order.id), /FORBIDDEN|42501/);
+    const job = await request("cashierA", order.id);
     expectOk(job);
-    expectDenied(await as("cashierA").from("print_jobs").update({ status: "PRINTED", printed_at: new Date().toISOString() }).eq("id", job.data!.id).select("id"));
-    expectDenied(await as("managerA").from("print_jobs").delete().eq("id", job.data!.id).select("id"));
-    expect((await admin().from("print_jobs").select("status").eq("id", job.data!.id).single()).data?.status).toBe("REQUESTED");
+    const id = (job.data as any).job_id as string;
+    expectDenied(await as("cashierA").from("print_jobs").update({ status: "PRINTED", printed_at: new Date().toISOString() }).eq("id", id).select("id"));
+    expectDenied(await as("cashierA").from("print_jobs").update({ payload: { forjado: true } }).eq("id", id).select("id"));
+    expectDenied(await as("managerA").from("print_jobs").delete().eq("id", id).select("id"));
+    expect((await admin().from("print_jobs").select("status").eq("id", id).single()).data?.status).toBe("REQUESTED");
   });
 
-  it.todo("[F-08] print_jobs.payload (snapshot de conta/ticket) deveria ser montado no servidor (RPC request_print); hoje o cliente com print.request define o conteúdo de FINAL_BILL/PARTIAL_BILL");
+  it("[F-08 corrigido] o payload é montado no servidor: o cliente não o define nem o altera", async () => {
+    const order = await makeOrder(cleanup, A().id);
+    const res = await request("cashierA", order.id, "ORDER_RECEIPT");
+    expectOk(res);
+    const stored = (await admin().from("print_jobs").select("payload").eq("id", (res.data as any).job_id).single()).data!.payload as any;
+    expect(stored).toMatchObject({ document_type: "ORDER_RECEIPT", order_number: order.order_number, total_cents: 3000 });
+    expect(stored.forjado).toBeUndefined();
+    // a RPC ignora qualquer tentativa de injetar conteúdo: só aceita (pedido, tipo)
+    const extra = await as("cashierA").rpc("request_print", { p_order: order.id, p_document_type: "KITCHEN_TICKET", p_payload: { forjado: true } } as never);
+    expect(extra.error, "RPC não deve aceitar p_payload").not.toBeNull();
+  });
 
   it("o próprio banco recusa PRINTED sem printed_at (nunca automático), mesmo para service role", async () => {
     const order = await makeOrder(cleanup, A().id);

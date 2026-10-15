@@ -1,7 +1,7 @@
 # Achados de segurança e consistência (Fase 1)
 
 Origem: suíte `tests/rls` rodando contra o Supabase local real. Os testes dos bugs confirmados usam `it.fails`:
-quando a migração é corrigida, o teste passa a falhar e vira `it`. F-01, F-02, F-05, F-06 e F-07 já foram promovidos a `it` (mig. 111).
+quando a migração é corrigida, o teste passa a falhar e vira `it`. F-01, F-02, F-05, F-06 e F-07 já foram promovidos a `it` (mig. 111); F-08 foi corrigido na mig. 0116.
 
 | # | Sev. | Tema | Teste | Status |
 |---|---|---|---|---|
@@ -11,13 +11,13 @@ quando a migração é corrigida, o teste passa a falhar e vira `it`. F-01, F-02
 | F-01 | Baixa | `tabs` INSERT aceita colunas de auditoria forjadas | `06` | corrigido (mig. 111) |
 | F-07 | Baixa | limite de 5 restaurantes em `register_restaurant` furado por concorrência | `07` | corrigido (mig. 111) |
 | F-02 | Baixa | `image_path` / `logo_path` sem validação de escopo | `14` | corrigido (mig. 111) |
-| F-08 | Baixa | `print_jobs.payload` definido pelo cliente | todo | Fase 3/4 (RPC `request_print`) |
+| F-08 | Baixa | `print_jobs.payload` definido pelo cliente | `06`, `14`, `20` | corrigido (mig. 0116: INSERT direto removido; payload montado por `request_print`) |
 | F-03 | Info | `qr_token` definível pelo cliente | todo | Fase 4 |
 | F-10 | Info | `support` lê `audit_logs` de todos sem sessão | — | corrigido (mig. 111) |
 | F-11 | Info | funções de trigger com EXECUTE para PUBLIC | — | corrigido (mig. 111) |
 | F-12 | Info | dono alterna AVAILABLE/INACTIVE (cadastro de mesa) | — | decisão de produto |
 | F-13 | Info | tabelas do domínio sem `FORCE ROW LEVEL SECURITY` | — | corrigido (mig. 111) |
-| F-14 | Info | RPCs de negócio ainda inexistentes | — | repetir testes 04–07 via RPC nas Fases 3/4 |
+| F-14 | Info | RPCs de negócio ainda inexistentes | `20` | Fase 3: transição de pedido e impressão cobertas via RPC (`20`); faltam as RPCs de comanda/pagamento (Fase 4) |
 | F-15 | Info | colegas leem `phone`/`avatar_url`; cozinha lê PII do cliente | — | aceito pelo contrato; revisar |
 
 ## Detalhes
@@ -96,3 +96,34 @@ Origem: `tests/rls/18-variants-headless` (87 testes, mig. 0113 via clientes anon
 - `product_variants`: anon só lê ativas de restaurante ativo (nunca suspenso/pendente); escrita só `menu.manage` (dono/gerente de A; caixa, cozinha, garçom, dono/gerente de B, sem vínculo e anon negados em insert/update/delete); FK composta impede variante de A em produto de B e mover para B; DELETE de variante vendida é filtrado e o soft-delete é permitido; nome único entre ativas; no máximo 1 padrão ativa; `variant_has_orders` não é oráculo de vendas.
 - `products.badges` (CHECK completo, só `menu.manage`), `validate_cart` com variantes (obrigatória/inexistente/outro produto ou restaurante indistinguíveis, preço forjado ignorado, variante + adicionais, nada gravado), `public_menu` (variants/badges/contact/URL, menor preço disponível, inativas ocultas, sem `storefront_origins`, `phone` só em `contact`).
 - `storefront_origins(slug)` / `get_storefront_origins`: matriz completa em `18`; a coluna `storefront_origins` é ilegível por anon e authenticated (direto, `select=*`, filtro, ordenação e `UPDATE ... RETURNING`, sem efeito colateral); CHECKs de whatsapp/phone/endereço/URL/origens; `order_items` exige snapshot e apagar a variante preserva o nome.
+
+
+---
+
+# Achados da Fase 3 (pedidos públicos, acompanhamento, transição de status, impressão, API de pedidos)
+
+Origem: `tests/rls/20-orders-rpcs` (migs. 0114-0116 via clientes anon/authenticated/service role reais), `tests/api/21-public-api-orders` (HTTP contra o dev server), ajustes em `06`/`14` e unitários (`orders-server`, `storefront-orders`, `operations`, `api-orders`, `sdk-orders`). **Nenhuma falha de isolamento entre restaurantes, escalonamento de privilégio, vazamento de PII no acompanhamento/impressão ou gravação indevida foi encontrada nas migrações 0114-0116 nem nas rotas de pedido.**
+
+| # | Sev. | Tema | Onde | Teste |
+|---|---|---|---|---|
+| F-08 | Baixa | `print_jobs.payload` definido pelo cliente | mig. 0116 | **corrigido**: `06` virou `it` (INSERT/UPDATE/DELETE diretos negados a todos os papéis; payload montado no servidor); `14` confere os grants |
+| F-29 | Baixa | NUL (`\u0000`) em `notes` do `cart/quote` => 500 | `public-api/schemas.ts` | `19` `it.fails` (continua aberto) |
+| F-30 | Baixa | NUL em `customer.name`/`notes` do `POST .../orders` passa no zod, o jsonb do Postgres recusa (22P05) e a API responde **500 internal_error** em vez de 400. Mesma causa do F-29; nenhum pedido é gravado. Correção: recusar `\u0000` nas strings do corpo (zod `.refine`) em `orders-server/schemas.ts` e `public-api/schemas.ts` | `orders-server/schemas.ts` | `21` `it.fails` |
+| F-31 | Info | Mesma `Idempotency-Key` com CONTEÚDO diferente devolve o pedido ORIGINAL (200, `idempotentReplay:true`, total antigo): o `409 idempotency_conflict` está mapeado no app/SDK mas o banco nunca o produz. Um bug de cliente que reutilize a chave descarta pedidos novos em silêncio. Correção: guardar um hash canônico do corpo (`orders.idempotency_hash`) e devolver `IDEMPOTENCY_CONFLICT` quando diferir | mig. 0114 | `20`, `21` (documentado, passa) |
+| F-32 | Info | `getCheckoutKey` com JSON corrompido no `sessionStorage` devolve uma chave válida mas NÃO a persiste: cada chamada gera outra chave (a trava do botão ainda segura o duplo clique). Correção: no `catch`, regravar a chave nova | `storefront/order-checkout.ts` | `unit/storefront-orders` (documentado) |
+| F-33 | Info | Com a cota cheia (5 criados / 10 min por IP+slug) até o REPLAY de um pedido já criado recebe 429 (a checagem vem antes da idempotência): quem perdeu a resposta do 5º pedido não recupera o código pelo replay (precisa do link/`localStorage`). A cota também é por IP: um NAT compartilhado divide os 5 pedidos. Mitigação: checar a idempotência antes do limite ou aumentar a cota | `orders-server/limits.ts` | `21` (documentado) |
+| F-34 | Info | `KITCHEN_TICKET` não leva totais, pagamento, telefone, e-mail nem endereço, mas os itens carregam `unit_price_cents`/`line_total_cents`/`price_delta_cents` (`order_items_json` é compartilhada com o recibo). Quem imprime já lê esses preços por RLS (`orders.view`); só importa se a cozinha não deve ver valores. Correção: parâmetro `p_prices boolean` em `order_items_json` | mig. 0116 | `20` (documentado) |
+| F-24 | Média (deploy) | rate limit usa o 1º `X-Forwarded-For`; vale também para pedidos (girar o cabeçalho zera a cota de 5/10 min e o teto de 30 tentativas) | `public-api/rate-limit.ts` | `19` (documentado) |
+
+- **Matriz de permissões**: o garçom TEM `print.request` e `orders.view` (e não `orders.update_status`/`accept`); o dono só tem `orders.view`. Por isso "garçom sem `print.request`" é testado com um override (`membership_permission_overrides granted=false`) no garçom descartável `waiter2A`, restaurado em `finally`. A cozinha também tem `orders.update_status`, então pode avançar READY->COMPLETED/OUT_FOR_DELIVERY (o teste só exige que ela NÃO aceite, recuse nem cancele).
+- **Códigos estáveis verificados**: `ORDER_NOT_FOUND` é idêntico (mensagem e SQLSTATE) para pedido inexistente e pedido sem `orders.view` (sem oráculo de existência); `FORBIDDEN` só aparece para quem VÊ o pedido; a máquina de estados do banco segue sendo a autoridade (`ORDER_INVALID_TRANSITION`, `REASON_REQUIRED`, `REASON_TOO_LONG`, `INVALID_STATUS`).
+- **Colunas**: `authenticated` só tem UPDATE em `orders.status/status_reason/estimated_ready_at`; `payment_method_intent`/`change_for_cents` são recusadas por grant de coluna (42501) e os CHECKs valem até para service role (23514).
+
+## Resultados positivos (Fase 3) — atacado e **não** furou
+
+- `create_public_order`: EXECUTE só service_role (anon, dono, caixa, sem vínculo e superadmin negados com 42501); preço/total forjado em qualquer lugar do JSON é ignorado; produto/zona/adicional de outro restaurante => erro, nada gravado (contagem de pedidos e de clientes inalterada em todas as recusas); chave de idempotência por restaurante, 8 chamadas simultâneas => 1 pedido (2 rodadas); `order_number` e `public_code` únicos sob concorrência; upsert de cliente não renomeia, não cruza restaurantes e remove o `55` só em 12/13 dígitos; snapshots de nome/variante/preço/adicionais sobrevivem a renomear/reprecificar o cardápio; restaurante suspenso/pendente/inexistente indistinguíveis.
+- `track_order`: conjunto de chaves exato, nenhum telefone/e-mail/nome/endereço/CEP/observação/uuid/chave de idempotência/troco em nenhuma resposta; código minúsculo, com espaços e O/I/L normalizado; slug errado, código curto/longo/com símbolos/SQLi => `null` sem erro; restaurante suspenso/pendente => `null`.
+- `transition_order_status`: matriz por papel completa; transições concorrentes serializadas (aceitar x recusar: exatamente uma vence, 3 rodadas; duas iguais: 1 aplica + 1 `unchanged`), histórico sem duplicidade.
+- `request_print`/`mark_print_job`: só o solicitante com `print.request` ainda ativo marca; `PRINTED` nunca é definido por cliente; payload do recibo sem telefone/e-mail e endereço só em DELIVERY; auditoria `print.requested` gravada.
+- API de pedidos: origem hostil recebe 403 antes de processar o corpo (nenhum pedido criado); 400/413/422/429 sem texto interno do banco, sem stack traces, sem chaves do Supabase nem ids de restaurante; o acompanhamento não cacheia (`no-store`, `noindex`) e códigos de outro restaurante dão o mesmo 404.
+- Realtime: o INSERT/UPDATE do pedido público chega à caixa e à cozinha de A e a ninguém de B (retry 3).

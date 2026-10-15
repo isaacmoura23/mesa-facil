@@ -1,3 +1,4 @@
+import type { TrackedOrder } from "@/modules/orders-server/tracking";
 import type { Fulfillment } from "@/modules/storefront/schemas";
 
 /**
@@ -140,6 +141,9 @@ export type ApiQuote = {
 export type ApiErrorCode =
   | "invalid_request"
   | "restaurant_not_found"
+  | "order_not_found"
+  | "order_rejected"
+  | "idempotency_conflict"
   | "origin_not_allowed"
   | "payload_too_large"
   | "rate_limited"
@@ -150,5 +154,30 @@ export type ApiErrorBody = {
     code: ApiErrorCode;
     message: string;
     details?: { path: string; message: string }[];
+    /** Apenas em `order_rejected` (422): motivos de negócio, por item quando houver. */
+    errors?: { code: string; field: string | null; itemIndex: number | null; message: string }[];
   };
 };
+
+// ---------------------------------------------------------------------------
+// Pedidos (Fase 3)
+// ---------------------------------------------------------------------------
+
+export type ApiPaymentMethod = "CASH" | "PIX" | "CARD";
+
+/** Resposta de POST .../orders. Nunca contém ids internos. */
+export type ApiOrderCreated = {
+  /** Código público: o único segredo do acompanhamento. Guarde-o. */
+  publicCode: string;
+  orderNumber: number;
+  status: string;
+  subtotalCents: number;
+  deliveryFeeCents: number;
+  totalCents: number;
+  estimatedReadyAt: string | null;
+  /** true quando a mesma chave de idempotência já havia criado este pedido. */
+  idempotentReplay: boolean;
+};
+
+/** Resposta de GET .../orders/{publicCode}: sem PII (só o bairro, sem telefone). */
+export type ApiOrderTracking = TrackedOrder;

@@ -1,4 +1,4 @@
-export { createStorefrontClient, StorefrontApiError } from "./client.js";
+export { createStorefrontClient, newIdempotencyKey, StorefrontApiError } from "./client.js";
 export type {
   FetchLike,
   RequestOptions,

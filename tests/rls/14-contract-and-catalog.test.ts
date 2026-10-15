@@ -91,7 +91,28 @@ describe.skipIf(!dockerAvailable)("catálogo do Postgres (default-deny)", () => 
     );
     // Fase 2: public_menu e validate_cart são públicas POR DESIGN (leitura/precificação sem gravar nada).
     // Etapa 2.5 (mig. 0113): storefront_origins(slug) alimenta o CORS da API pública (devolve só as origens de restaurante ativo).
-    expect(anonExec).toEqual(["public_menu", "resolve_restaurant_by_slug", "restaurant_is_public", "storefront_origins", "validate_cart"]);
+    // Fase 3 (mig. 0115): track_order (acompanhamento por código público de 80 bits, sem PII) também é pública por desenho.
+    expect(anonExec).toEqual(["public_menu", "resolve_restaurant_by_slug", "restaurant_is_public", "storefront_origins", "track_order", "validate_cart"]);
+  });
+
+  it("Fase 3 (migs. 0114-0116): EXECUTE por papel — create_public_order só service_role; transition_order_status/request_print/mark_print_job só authenticated; track_order anon+authenticated", () => {
+    const priv = (sig: string) =>
+      psql(
+        `select has_function_privilege('anon','${sig}','execute')||'|'||has_function_privilege('authenticated','${sig}','execute')||'|'||has_function_privilege('public','${sig}','execute')||'|'||has_function_privilege('service_role','${sig}','execute')`,
+      )?.map((l) => l.replace(/true/g, "t").replace(/false/g, "f"));
+    // anon | authenticated | PUBLIC | service_role
+    expect(priv("public.create_public_order(text,text,jsonb,jsonb,jsonb,uuid,text,text,jsonb)")).toEqual(["f|f|f|t"]);
+    expect(priv("public.transition_order_status(uuid,text,text)")).toEqual(["f|t|f|t"]);
+    expect(priv("public.request_print(uuid,text)")).toEqual(["f|t|f|t"]);
+    expect(priv("public.mark_print_job(uuid,text)")).toEqual(["f|t|f|t"]);
+    expect(priv("public.track_order(text,text)")).toEqual(["t|t|f|t"]);
+  });
+
+  it("Fase 3: print_jobs não tem mais INSERT/UPDATE/DELETE para authenticated (F-08) nem policy de INSERT; SELECT permanece", () => {
+    expect(
+      psql("select string_agg(privilege_type, ',' order by privilege_type) from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name='print_jobs'"),
+    ).toEqual(["SELECT"]);
+    expect(psql("select count(*) from pg_policies where schemaname='public' and tablename='print_jobs' and cmd in ('INSERT','UPDATE','DELETE')")).toEqual(["0"]);
   });
 
   it("reorder_menu: authenticated executa, anon e PUBLIC não", () => {

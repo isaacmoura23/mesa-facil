@@ -1,5 +1,7 @@
 import "server-only";
 import { publicImageUrl } from "@/lib/storage";
+import { beginOrderAttempt, getOrderLimiters } from "@/modules/orders-server/limits";
+import { submitPublicOrder, trackOrder } from "@/modules/orders-server/service";
 import { createOriginsCache, type OriginsCache } from "./cors";
 import { fetchMenuRaw, fetchQuoteRaw, fetchStorefrontOrigins } from "./data";
 import { createPublicApi, type PublicApi } from "./handlers";
@@ -25,7 +27,7 @@ type Singleton = {
  * Um único conjunto de contadores/cache por processo (sobrevive ao HMR em dev e
  * é compartilhado entre as rotas menu e quote quando estão na mesma instância).
  */
-const globalStore = globalThis as typeof globalThis & { __mesafacilPublicApi?: Singleton };
+const globalStore = globalThis as typeof globalThis & { __mesafacilPublicApiV4?: Singleton };
 
 function build(): Singleton {
   const windowMs = 60_000;
@@ -40,6 +42,12 @@ function build(): Singleton {
     loadQuote: fetchQuoteRaw,
     loadOrigins: (slug) => origins.get(slug),
     limiters,
+    orders: {
+      submit: (slug, input) => submitPublicOrder(input, { slug, source: "api" }),
+      track: trackOrder,
+      beginAttempt: beginOrderAttempt,
+      trackLimiter: getOrderLimiters().track,
+    },
     isDev: () => process.env.NODE_ENV !== "production",
     imageUrl: publicImageUrl,
   });
@@ -47,6 +55,6 @@ function build(): Singleton {
 }
 
 export function getPublicApi(): PublicApi {
-  globalStore.__mesafacilPublicApi ??= build();
-  return globalStore.__mesafacilPublicApi.api;
+  globalStore.__mesafacilPublicApiV4 ??= build();
+  return globalStore.__mesafacilPublicApiV4.api;
 }

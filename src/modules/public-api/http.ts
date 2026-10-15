@@ -29,6 +29,9 @@ export function jsonResponse(
 const DEFAULT_MESSAGES: Record<ApiErrorCode, string> = {
   invalid_request: "Requisição inválida.",
   restaurant_not_found: "Restaurante não encontrado.",
+  order_not_found: "Pedido não encontrado.",
+  order_rejected: "O pedido não pôde ser aceito.",
+  idempotency_conflict: "Esta chave de idempotência já foi usada com outro conteúdo.",
   origin_not_allowed: "Origem não autorizada para este restaurante.",
   payload_too_large: "Corpo da requisição grande demais (máximo 64 KB).",
   rate_limited: "Muitas requisições. Tente novamente em instantes.",
@@ -43,6 +46,7 @@ export function errorResponse(
     message?: string;
     headers?: Record<string, string>;
     details?: ApiErrorBody["error"]["details"];
+    errors?: ApiErrorBody["error"]["errors"];
   } = {},
 ): Response {
   const body: ApiErrorBody = {
@@ -50,6 +54,7 @@ export function errorResponse(
       code,
       message: options.message ?? DEFAULT_MESSAGES[code],
       ...(options.details && options.details.length > 0 ? { details: options.details } : {}),
+      ...(options.errors && options.errors.length > 0 ? { errors: options.errors } : {}),
     },
   };
   return jsonResponse(body, {

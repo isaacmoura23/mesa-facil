@@ -2,11 +2,13 @@
 
 SDK mínimo (só `fetch`, **zero dependências**, ESM + tipos) para vitrines personalizadas —
 sites estáticos ou Next.js hospedados em outro domínio (ex.: `la-pastelaria.vercel.app`) — lerem o
-cardápio de um restaurante do MesaFácil e cotarem o carrinho pela **API pública v1**.
+cardápio de um restaurante do MesaFácil, cotarem o carrinho e **enviarem e acompanharem pedidos** pela
+**API pública v1**.
 
 > A vitrine **nunca** recebe chaves do Supabase. Cardápio, preços, horários e taxas vêm do SaaS; o dono
-> edita tudo no painel e a vitrine reflete em até ~1 minuto. Cotar o carrinho **não cria pedido** (a criação
-> de pedidos chega na Fase 3).
+> edita tudo no painel e a vitrine reflete em até ~1 minuto. Cotar o carrinho **não cria pedido**; o pedido só
+> existe depois de `createOrder`. **Não há pagamento online**: o cliente declara a forma (dinheiro, Pix ou
+> cartão) e paga ao receber/retirar.
 
 ## Instalação
 
@@ -182,6 +184,130 @@ Códigos de `quote.errors[].code`: `RESTAURANT_UNAVAILABLE`, `RESTAURANT_CLOSED`
 * `isOpenNow(menu)` usa o `isOpenNow` calculado pelo servidor (horários, exceções e fuso do restaurante).
   `menu.settings.acceptsOrders` indica se o restaurante está recebendo pedidos.
 
+## Enviando o pedido (checkout)
+
+`createOrder` recalcula tudo no servidor (preços, taxa, mínimo, horário) e cria o pedido com status
+`RECEIVED`. Ele é **idempotente** por chave: reenviar o mesmo pedido com a mesma `idempotencyKey` (duplo clique,
+retry após falha de rede) devolve o mesmo pedido (`idempotentReplay: true`), nunca um duplicado.
+
+```ts
+import {
+  createStorefrontClient,
+  newIdempotencyKey,
+  StorefrontApiError,
+} from "@mesafacil/storefront-sdk";
+
+const api = createStorefrontClient({ baseUrl: "https://app.mesafacil.com.br", slug: "la-pastelaria" });
+
+// Gere UMA chave por tentativa de checkout e guarde-a até o sucesso (sessionStorage).
+const key = sessionStorage.getItem("checkout-key") ?? newIdempotencyKey();
+sessionStorage.setItem("checkout-key", key);
+
+try {
+  const order = await api.createOrder({
+    fulfillmentType: "DELIVERY",
+    deliveryZoneId: zona.id,
+    items: cart, // mesmo formato da cotação
+    customer: { name: "Maria Souza", phone: "(11) 91234-5678", email: "maria@exemplo.com" },
+    address: {
+      street: "Rua das Flores",
+      number: "120",
+      neighborhood: "Centro",
+      city: "São Paulo",
+      postalCode: "01310-100",
+      complement: "Apto 4",
+      instructions: "Interfone 4",
+    },
+    notes: "Sem cebola",
+    payment: { method: "CASH", changeForCents: 10000 }, // dinheiro, troco para R$ 100,00
+    idempotencyKey: key,
+  });
+
+  sessionStorage.removeItem("checkout-key"); // sucesso: a próxima compra usa outra chave
+  // Guarde o código: ele é o único segredo do acompanhamento.
+  localStorage.setItem("ultimo-pedido", order.publicCode);
+  location.href = `/pedido.html?codigo=${encodeURIComponent(order.publicCode)}`;
+} catch (error) {
+  if (error instanceof StorefrontApiError) {
+    if (error.code === "order_rejected") {
+      // 422: regras de negócio. Cada item de `rejections` tem mensagem PT-BR pronta para exibir.
+      for (const r of error.rejections ?? []) {
+        console.warn(r.itemIndex === null ? "Pedido:" : `Item ${r.itemIndex + 1}:`, r.message, `[${r.code}]`);
+      }
+    } else if (error.code === "rate_limited") {
+      // 429: no máximo 5 pedidos a cada 10 min por IP e restaurante. Espere error.retryAfterSeconds.
+    } else if (error.code === "invalid_request") {
+      console.warn(error.details); // 400: [{ path: "customer.phone", message: "..." }]
+    }
+  }
+}
+```
+
+### Acompanhar o pedido
+
+```ts
+const order = await api.trackOrder(publicCode); // 404 `order_not_found` se o código não existe
+console.log(order.status, order.estimatedReadyAt, order.statusReason);
+```
+
+`status`: `RECEIVED` > `CONFIRMED` > `PREPARING` > `READY` > (`OUT_FOR_DELIVERY` só em entrega) > `COMPLETED`;
+ou `REJECTED` / `CANCELLED` (com `statusReason`). Para acompanhar ao vivo, consulte a cada 10 a 15 s,
+**pause quando a aba estiver oculta** (`document.visibilityState`), aumente o intervalo se houver erro e pare
+nos estados finais. A resposta não traz telefone, e-mail, nome do cliente nem o endereço completo (só o bairro).
+
+### Exemplo de página estática de checkout
+
+```html
+<form id="checkout">
+  <input name="name" required minlength="2" maxlength="80" />
+  <input name="phone" required inputmode="tel" />
+  <select name="payment">
+    <option value="PIX">Pix na entrega</option>
+    <option value="CASH">Dinheiro</option>
+    <option value="CARD">Cartão na entrega</option>
+  </select>
+  <button type="submit">Enviar pedido</button>
+  <p id="msg" role="alert"></p>
+</form>
+<script type="module">
+  import { createStorefrontClient, newIdempotencyKey, StorefrontApiError } from "./mesafacil-sdk/index.js";
+  const api = createStorefrontClient({ baseUrl: "https://app.mesafacil.com.br", slug: "la-pastelaria" });
+  const form = document.getElementById("checkout");
+  const msg = document.getElementById("msg");
+  const cart = JSON.parse(localStorage.getItem("cart") ?? "[]"); // [{ productId, quantity, modifierIds }]
+  let key = sessionStorage.getItem("key") ?? newIdempotencyKey();
+  sessionStorage.setItem("key", key);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = form.querySelector("button");
+    button.disabled = true; // evita duplo clique (a chave de idempotência é a segunda barreira)
+    const data = new FormData(form);
+    try {
+      const order = await api.createOrder({
+        fulfillmentType: "PICKUP",
+        items: cart,
+        customer: { name: data.get("name"), phone: data.get("phone") },
+        payment: { method: data.get("payment") },
+        idempotencyKey: key,
+      });
+      sessionStorage.removeItem("key");
+      localStorage.removeItem("cart");
+      location.href = `pedido.html?codigo=${encodeURIComponent(order.publicCode)}`;
+    } catch (error) {
+      msg.textContent =
+        error instanceof StorefrontApiError && error.rejections?.length
+          ? error.rejections.map((r) => r.message).join(" ")
+          : "Não foi possível enviar o pedido. Tente novamente.";
+      button.disabled = false;
+    }
+  });
+</script>
+```
+
+> `createOrder` envia o header `Idempotency-Key`, que dispara um preflight CORS: cadastre a origem da vitrine
+> (veja CORS abaixo). Chamado do servidor da vitrine (Server Action / rota), não há CORS.
+
 ## Tratamento de erros
 
 Toda falha é um `StorefrontApiError` com `code`, `status` (0 para falhas locais) e `message`:
@@ -194,6 +320,9 @@ try {
 } catch (error) {
   if (error instanceof StorefrontApiError) {
     switch (error.code) {
+      case "order_rejected": // 422 — veja error.rejections (createOrder)
+      case "idempotency_conflict": // 409 — a chave foi usada com outro conteúdo
+      case "order_not_found": // 404 — trackOrder com código inexistente
       case "rate_limited": // 429 — espere error.retryAfterSeconds
       case "origin_not_allowed": // 403 — cadastre a origem (veja CORS)
       case "invalid_request": // 400 — veja error.details
@@ -225,8 +354,8 @@ Requisições sem cabeçalho `Origin` (servidor a servidor, `curl`) não são af
 
 ## Limites
 
-Por IP + restaurante: menu 120 req/min, cotação 60 req/min (`429` com `Retry-After`). Corpo de cotação
-até 64 KB. Em hospedagem serverless o contador é por instância; trate `rate_limited` com
+Por IP + restaurante: menu 120 req/min, cotação 60 req/min, acompanhamento 60 req/min e **pedidos 5 a cada
+10 min** (`429` com `Retry-After`). Corpo de cotação/pedido até 64 KB. Em hospedagem serverless o contador é por instância; trate `rate_limited` com
 espera e cacheie o cardápio na vitrine (`revalidate`) em vez de chamar a cada visita.
 
 ## Desenvolvimento do SDK

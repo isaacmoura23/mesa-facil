@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MenuView } from "@/components/storefront/menu-view";
+import { RecentOrders } from "@/components/storefront/recent-orders";
 import { RestaurantHero } from "@/components/storefront/restaurant-hero";
 import { getPublicMenu } from "@/modules/storefront/data";
 
@@ -24,6 +25,7 @@ export default async function Page({ params }: Props) {
   return (
     <>
       <RestaurantHero menu={menu} />
+      <RecentOrders slug={menu.restaurant.slug} />
       <MenuView slug={menu.restaurant.slug} categories={menu.categories} />
     </>
   );

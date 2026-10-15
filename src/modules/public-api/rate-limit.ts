@@ -19,6 +19,8 @@ export type RateLimitResult = {
 
 export type RateLimiter = {
   check(key: string): RateLimitResult;
+  /** Devolve a ÚLTIMA tentativa registrada da chave (ex.: o pedido acabou não sendo criado). */
+  refund(key: string): void;
   size(): number;
 };
 
@@ -50,6 +52,12 @@ export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
 
   return {
     size: () => hitsByKey.size,
+    refund(key) {
+      const hits = hitsByKey.get(key);
+      if (!hits) return;
+      hits.pop();
+      if (hits.length === 0) hitsByKey.delete(key);
+    },
     check(key) {
       const ts = now();
       const cutoff = ts - windowMs;

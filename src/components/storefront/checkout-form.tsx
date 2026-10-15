@@ -1,8 +1,9 @@
 "use client";
 
-import { useId, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Bike, ShoppingBag, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bike, CircleCheck, ShoppingBag, Store, UtensilsCrossed, type LucideIcon } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,7 +11,7 @@ import { TextField, inputStyles } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCents } from "@/lib/format";
 import { cn } from "@/lib/utils/cn";
-import { reviewCheckoutAction } from "@/modules/storefront/actions";
+import type { OrderErrorItem, PaymentMethod } from "@/modules/orders-server/schemas";
 import { toCheckoutItems } from "@/modules/storefront/cart";
 import { useCart } from "@/modules/storefront/cart-context";
 import {
@@ -21,6 +22,17 @@ import {
   type CheckoutFormValues,
 } from "@/modules/storefront/checkout-schema";
 import { maskCep, maskPhone } from "@/modules/storefront/masks";
+import { createOrderAction } from "@/modules/storefront/order-actions";
+import {
+  EMPTY_PAYMENT_FORM,
+  changeForCents,
+  clearCheckoutKey,
+  fingerprint,
+  getCheckoutKey,
+  paymentFormSchema,
+  rememberOrder,
+  type PaymentFieldErrors,
+} from "@/modules/storefront/order-checkout";
 import {
   FULFILLMENT_LABELS,
   type Fulfillment,
@@ -28,6 +40,7 @@ import {
 } from "@/modules/storefront/schemas";
 import { useCartQuote } from "@/modules/storefront/use-cart-quote";
 import { CheckoutSummary } from "./checkout-summary";
+import { PaymentSection } from "./payment-section";
 
 const ICONS: Record<Fulfillment, LucideIcon> = {
   DELIVERY: Bike,
@@ -44,6 +57,21 @@ const HINTS: Record<Fulfillment, string> = {
 type CheckoutFormProps = {
   slug: string;
   settings: PublicMenu["settings"];
+};
+
+/** Campo do RPC (ex.: "customer.phone") -> campo do formulário. */
+const SERVER_FIELD_MAP: Record<string, keyof CheckoutFormValues> = {
+  "customer.name": "name",
+  "customer.phone": "phone",
+  "customer.email": "email",
+  "address.street": "street",
+  "address.number": "number",
+  "address.neighborhood": "neighborhood",
+  "address.city": "city",
+  "address.postal_code": "postalCode",
+  "address.complement": "complement",
+  "address.instructions": "instructions",
+  notes: "notes",
 };
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -66,8 +94,15 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
   const [touched, setTouched] = useState<Partial<Record<keyof CheckoutFormValues, boolean>>>({});
   const [attempted, setAttempted] = useState(false);
   const [serverErrors, setServerErrors] = useState<CheckoutFieldErrors>({});
-  const [reviewMessage, setReviewMessage] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
-  const [reviewing, startReview] = useTransition();
+  const router = useRouter();
+  const [payment, setPayment] = useState<{ method: PaymentMethod | ""; changeFor: string }>(EMPTY_PAYMENT_FORM);
+  const [paymentErrors, setPaymentErrors] = useState<PaymentFieldErrors>({});
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [orderErrors, setOrderErrors] = useState<OrderErrorItem[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  // Trava síncrona: dois cliques no mesmo tick nunca disparam dois envios.
+  const inFlight = useRef(false);
   const [nonce, setNonce] = useState(0);
 
   const { result, pending } = useCartQuote({
@@ -85,7 +120,13 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
   function set<K extends keyof CheckoutFormValues>(key: K, value: CheckoutFormValues[K]) {
     setValues((current) => ({ ...current, [key]: value }));
     setServerErrors((current) => ({ ...current, [key]: undefined }));
-    setReviewMessage(null);
+    setSubmitMessage(null);
+  }
+
+  function setPaymentField(next: Partial<typeof payment>) {
+    setPayment((current) => ({ ...current, ...next }));
+    setPaymentErrors({});
+    setSubmitMessage(null);
   }
 
   const touch = (key: keyof CheckoutFormValues) => () =>
@@ -97,42 +138,97 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
   const delivery = values.fulfillment === "DELIVERY";
   const zone = settings.deliveryZones.find((z) => z.id === values.zoneId);
 
-  function review() {
+  const quoteTotal = result?.status === "ok" && result.quote.ok ? result.quote.totalCents : null;
+
+  async function submit() {
+    if (inFlight.current) return;
     setAttempted(true);
-    setReviewMessage(null);
-    if (!parsed.success) {
-      setReviewMessage({ tone: "danger", text: "Revise os campos destacados antes de continuar." });
+    setSubmitMessage(null);
+    setOrderErrors([]);
+
+    const paymentParsed = paymentFormSchema.safeParse(payment);
+    const nextPaymentErrors: PaymentFieldErrors = {};
+    if (!paymentParsed.success) {
+      for (const issue of paymentParsed.error.issues) {
+        const key = issue.path[0];
+        if ((key === "method" || key === "changeFor") && !(key in nextPaymentErrors)) {
+          nextPaymentErrors[key] = issue.message;
+        }
+      }
+    } else {
+      const change = changeForCents(payment);
+      if (change !== null && quoteTotal !== null && change < quoteTotal) {
+        nextPaymentErrors.changeFor = `O valor para troco precisa ser maior ou igual ao total (${formatCents(quoteTotal)}).`;
+      }
+    }
+    setPaymentErrors(nextPaymentErrors);
+
+    if (!parsed.success || Object.keys(nextPaymentErrors).length > 0) {
+      setSubmitMessage("Revise os campos destacados antes de enviar.");
       const firstKey = Object.keys(clientErrors)[0];
       if (firstKey) document.getElementById(`${uid}-${firstKey}`)?.focus();
+      else if (nextPaymentErrors.method) document.getElementById(`${uid}-payment-CASH`)?.focus();
+      else if (nextPaymentErrors.changeFor) document.getElementById(`${uid}-changeFor`)?.focus();
       return;
     }
-    startReview(async () => {
-      const response = await reviewCheckoutAction({
-        form: values,
-        cart: {
-          slug,
-          fulfillment: values.fulfillment,
-          zoneId: values.zoneId || null,
-          items: toCheckoutItems(cart.lines),
-        },
-      });
-      if (response.status === "invalid") {
-        setServerErrors(response.fieldErrors);
-        setReviewMessage({ tone: "danger", text: "Revise os campos destacados antes de continuar." });
-      } else if (response.status === "error") {
-        setReviewMessage({ tone: "danger", text: response.message });
-      } else if (!response.quote.ok) {
-        setReviewMessage({
-          tone: "danger",
-          text: "Há problemas com o pedido. Veja os avisos no resumo.",
-        });
-      } else {
-        setReviewMessage({
-          tone: "success",
-          text: "Dados e valores conferidos. O envio do pedido ainda não está disponível.",
-        });
+
+    const items = toCheckoutItems(cart.lines);
+    const form = { ...values, zoneId: values.zoneId };
+    // A chave vale para ESTE conteúdo: reenviar o mesmo pedido nunca duplica.
+    const idempotencyKey = getCheckoutKey(slug, fingerprint({ form, payment, items }));
+
+    inFlight.current = true;
+    setSubmitting(true);
+    try {
+      const response = await createOrderAction({ slug, form, payment, items, idempotencyKey });
+      switch (response.status) {
+        case "created": {
+          setRedirecting(true);
+          clearCheckoutKey(slug);
+          rememberOrder({
+            slug,
+            publicCode: response.publicCode,
+            orderNumber: response.orderNumber,
+            at: new Date().toISOString(),
+          });
+          router.push(`/r/${encodeURIComponent(slug)}/pedido/${encodeURIComponent(response.publicCode)}`);
+          // Esvazia o carrinho só depois de pedir a navegação (sem piscar "carrinho vazio").
+          cart.clear();
+          return;
+        }
+        case "invalid": {
+          setServerErrors(response.fieldErrors);
+          setPaymentErrors(response.paymentErrors);
+          setSubmitMessage("Revise os campos destacados antes de enviar.");
+          break;
+        }
+        case "rejected": {
+          const fieldErrors: CheckoutFieldErrors = {};
+          const general: OrderErrorItem[] = [];
+          for (const error of response.errors) {
+            const key = error.field ? SERVER_FIELD_MAP[error.field] : undefined;
+            if (key && !(key in fieldErrors)) fieldErrors[key] = error.message;
+            else general.push(error);
+          }
+          setServerErrors(fieldErrors);
+          setOrderErrors(general);
+          setNonce((n) => n + 1); // reconfere o resumo com os avisos atualizados
+          setSubmitMessage(
+            general.length > 0 || Object.keys(fieldErrors).length > 0
+              ? "Não foi possível enviar o pedido. Veja os avisos abaixo."
+              : "Não foi possível enviar o pedido.",
+          );
+          break;
+        }
+        default:
+          setSubmitMessage(response.message);
       }
-    });
+    } catch {
+      setSubmitMessage("Não foi possível enviar o pedido agora. Verifique sua conexão e tente novamente.");
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
   }
 
   if (!cart.ready) {
@@ -148,6 +244,16 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
   }
 
   const menuHref = `/r/${encodeURIComponent(slug)}`;
+
+  if (redirecting) {
+    return (
+      <div role="status" className="flex flex-col items-center gap-3 py-16 text-center">
+        <CircleCheck aria-hidden="true" className="size-10 text-accent" />
+        <p className="text-lg font-semibold text-fg">Pedido enviado</p>
+        <p className="text-sm text-muted">Abrindo o acompanhamento do seu pedido...</p>
+      </div>
+    );
+  }
 
   if (cart.lines.length === 0) {
     return (
@@ -184,7 +290,7 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            review();
+            void submit();
           }}
           className="order-last space-y-6 lg:order-first"
         >
@@ -421,27 +527,43 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
             </div>
           </Section>
 
+          <PaymentSection
+            id={uid}
+            fulfillment={values.fulfillment}
+            method={payment.method}
+            changeFor={payment.changeFor}
+            errors={paymentErrors}
+            onMethod={(method) =>
+              setPaymentField({ method, changeFor: method === "CASH" ? payment.changeFor : "" })
+            }
+            onChangeFor={(changeFor) => setPaymentField({ changeFor })}
+          />
+
           <section aria-labelledby={`${uid}-final`} className="space-y-3">
             <h2 id={`${uid}-final`} className="sr-only">
               Enviar pedido
             </h2>
-            <Alert tone="info" title="Envio de pedidos online disponível na próxima etapa">
-              Você já pode conferir itens, taxa e total. O botão de envio será liberado quando o
-              recebimento de pedidos entrar no ar.
-            </Alert>
             <div aria-live="polite">
-              {reviewMessage ? (
-                <Alert tone={reviewMessage.tone}>{reviewMessage.text}</Alert>
+              {submitMessage ? <Alert tone="danger">{submitMessage}</Alert> : null}
+              {orderErrors.length > 0 ? (
+                <ul className="mt-2 space-y-1 rounded-control bg-danger-soft px-4 py-3 text-sm text-danger-soft-fg">
+                  {orderErrors.map((error, index) => (
+                    <li key={`${error.code}-${error.itemIndex ?? "x"}-${index}`}>
+                      {error.itemIndex !== null && cart.lines[error.itemIndex] ? (
+                        <strong>{cart.lines[error.itemIndex].snapshot.name}: </strong>
+                      ) : null}
+                      {error.message}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="submit" variant="secondary" size="lg" loading={reviewing}>
-                Conferir dados
-              </Button>
-              <Button type="button" size="lg" disabled aria-disabled="true">
-                Enviar pedido (indisponível)
-              </Button>
-            </div>
+            <Button type="submit" size="lg" fullWidth loading={submitting} disabled={submitting}>
+              {quoteTotal !== null ? `Enviar pedido (${formatCents(quoteTotal)})` : "Enviar pedido"}
+            </Button>
+            <p className="text-center text-sm text-muted">
+              Ao enviar, o restaurante recebe o pedido na hora. Não há cobrança online.
+            </p>
           </section>
         </form>
 

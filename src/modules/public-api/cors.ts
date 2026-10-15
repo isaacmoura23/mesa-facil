@@ -7,7 +7,7 @@
  */
 
 export const PREFLIGHT_MAX_AGE_SECONDS = 600;
-export const ALLOWED_REQUEST_HEADERS = "Content-Type, Accept";
+export const ALLOWED_REQUEST_HEADERS = "Content-Type, Accept, Idempotency-Key";
 
 const HOST_PATTERN = /^[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?)*$/;
 

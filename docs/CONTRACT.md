@@ -133,3 +133,40 @@ As vitrines nunca recebem chaves do Supabase.
 - **ADMIN2** (após DB-4): variantes, selos, contato, origens e URL da vitrine em `/app/[slug]/cardapio` e `/app/[slug]/restaurante`.
 - **PUBLIC2** (após DB-4): `/r/**` com variantes/selos/contato.
 - **IMPORT** (após DB-4): `scripts/import-restaurants.ts` (La Pastelaria e O Nailton).
+
+---
+
+# Fase 3 — Pedidos, operação em tempo real e impressão (contrato)
+
+Decisões: criação pública de pedido é **só por servidor** (`create_public_order` com EXECUTE apenas para `service_role`, chamada por
+Route Handler/Server Action após rate limit por IP+slug e checagem de origem); acompanhamento por `public_code` é legível por anon
+(80 bits, sem PII); pagamento online NÃO existe: o cliente declara a forma (`CASH`, `PIX`, `CARD`) a pagar na entrega/retirada, `payment_status` nasce `UNPAID`.
+Reutiliza `app_private.price_cart` (única fonte de cálculo). Realtime só para equipe autenticada (anon acompanha por polling).
+
+## RPCs (DB-5, migrações `20260101000114+`)
+
+- `create_public_order(p_slug text, p_fulfillment text, p_items jsonb, p_customer jsonb /*{name,phone,email?}*/, p_address jsonb /*{street,number,neighborhood,city,postal_code?,complement?,instructions?}|null*/, p_delivery_zone_id uuid, p_notes text, p_idempotency_key text, p_payment jsonb /*{method:'CASH'|'PIX'|'CARD', change_for_cents?}*/) returns jsonb` — service_role apenas. Valida tudo via `price_cart` (erro → `{ok:false,errors}` sem gravar), upsert de `customers` por (restaurant, telefone normalizado), snapshot de endereço, `orders` + `order_items` + `order_item_modifiers` (snapshots de produto/variante/adicionais), status `RECEIVED`, `payment_status` `UNPAID`, `public_code` gerado, tudo numa transação; **idempotente** por (restaurant_id, idempotency_key): repetição devolve o mesmo pedido (`idempotent_replay:true`). Retorna `{ok:true, public_code, order_number, status, total_cents, ...}` (sem IDs internos de cliente).
+- `track_order(p_slug text, p_public_code text) returns jsonb` — anon+authenticated; `null` se não existe; devolve restaurante (nome), `order_number`, `fulfillment_type`, `status`, `payment_status`, itens (nome/variante/adicionais/qtd/preço), totais, `status_history` [{to_status,at}] (sem `changed_by`), bairro apenas (sem telefone/endereço completo), `estimated_ready_at`, mensagem de recusa/cancelamento se houver motivo.
+- `transition_order_status(p_order uuid, p_to text, p_reason text default null) returns jsonb` — authenticated; trava a linha (`FOR UPDATE`), usa a máquina de estados/permissões existentes (aceitar=orders.accept, recusar=orders.reject, cancelar=orders.cancel, demais=orders.update_status), motivo obrigatório em REJECTED/CANCELLED, retorna o pedido atualizado; idempotente se já estiver no estado pedido pelo mesmo caminho (retorna `{ok:true,unchanged:true}`). Códigos de erro estáveis já existentes (`ORDER_INVALID_TRANSITION`, `REASON_REQUIRED`, `FORBIDDEN`).
+- `request_print(p_order uuid, p_document_type text) returns jsonb` — authenticated com `print.request` e acesso de leitura ao pedido; monta o payload no servidor (restaurante, nº, data/hora no fuso, modalidade, mesa/comanda, itens, variantes, adicionais, observações; sem dados desnecessários do cliente), grava `print_jobs` com status `REQUESTED` e `requested_by=auth.uid()` + audit; retorna `{job_id, payload}`. Remover INSERT direto de `print_jobs` pelo cliente (F-08).
+- `mark_print_job(p_job uuid, p_status text)` — somente `DISPATCHED` (diálogo aberto) ou `FAILED` pelo solicitante; nunca `PRINTED`.
+- Novas colunas em `orders`: `payment_method_intent text` (CASH|PIX|CARD) e `change_for_cents int` com CHECKs.
+- Pausar/horário: reutilizar `restaurant_settings.accepts_orders` e `is_open_now` via `price_cart`.
+
+## API pública v1 (acréscimo, ORDERS)
+
+- `POST /api/public/v1/restaurants/{slug}/orders` (body: fulfillmentType, items, customer, address?, deliveryZoneId?, notes?, payment, idempotencyKey) → 201 `{data:{publicCode,orderNumber,status,totalCents,...}}`; erros 400/409/422/429; CORS e limites do restante da API; limite próprio mais estrito (ex.: 5 pedidos/10 min por IP+slug).
+- `GET  /api/public/v1/restaurants/{slug}/orders/{publicCode}` → acompanhamento (`track_order`), `no-store`.
+- SDK: `createOrder`, `trackOrder`. Vitrine padrão `/r/[slug]` usa Server Actions equivalentes (mesmas funções internas em `src/modules/orders-server/`).
+
+## Painel operacional (OPS)
+
+Telas `/operacao/[slug]/{pedidos,cozinha,historico}`; leitura direta das tabelas por RLS (`orders.view`) + RPC `transition_order_status`; Realtime filtrado por `restaurant_id` (canal por restaurante), carga inicial + refetch ao reconectar + dedupe por id; alerta sonoro configurável (volume/ligado, preferências em localStorage, desbloqueio de áudio por clique); impressão via `window.print()` + `@media print` (80 mm/58 mm). `/app/[slug]/pedidos` do dono continua SOMENTE leitura.
+
+## Divisão
+
+- **DB-5**: `supabase/migrations/20260101000114+`.
+- **OPS-A**: `src/modules/operations/**`, `src/components/operations/**`, `src/app/operacao/[slug]/pedidos/**`.
+- **ORDERS**: `src/modules/orders-server/**`, `src/modules/storefront/**`, `src/components/storefront/**`, `src/app/r/**`, `src/app/api/public/v1/restaurants/[slug]/orders/**`, `src/modules/public-api/**`, `sdk/**`.
+- **OPS-B** (após OPS-A): `src/app/operacao/[slug]/{cozinha,historico}/**`, `src/modules/printing/**`, `src/components/printing/**`.
+- **TESTS3** (por último): `tests/**`, `scripts/**`.

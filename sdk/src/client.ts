@@ -1,4 +1,13 @@
-import type { Menu, Quote, QuoteInput, StorefrontErrorCode } from "./types.js";
+import type {
+  CreateOrderInput,
+  CreatedOrder,
+  Menu,
+  OrderRejection,
+  Quote,
+  QuoteInput,
+  StorefrontErrorCode,
+  TrackedOrder,
+} from "./types.js";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -27,6 +36,8 @@ export class StorefrontApiError extends Error {
   readonly retryAfterSeconds: number | null;
   /** Detalhes de validação (400), quando houver. */
   readonly details: { path: string; message: string }[] | null;
+  /** Motivos de negócio (422 `order_rejected`), por item/campo quando houver. */
+  readonly rejections: OrderRejection[] | null;
 
   constructor(
     code: StorefrontErrorCode,
@@ -35,6 +46,7 @@ export class StorefrontApiError extends Error {
     extra: {
       retryAfterSeconds?: number | null;
       details?: { path: string; message: string }[] | null;
+      rejections?: OrderRejection[] | null;
     } = {},
   ) {
     super(message);
@@ -43,12 +55,31 @@ export class StorefrontApiError extends Error {
     this.status = status;
     this.retryAfterSeconds = extra.retryAfterSeconds ?? null;
     this.details = extra.details ?? null;
+    this.rejections = extra.rejections ?? null;
   }
+}
+
+/** Chave de idempotência nova (UUID). Reutilize-a nas novas tentativas do MESMO pedido. */
+export function newIdempotencyKey(): string {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (c && typeof c.getRandomValues === "function") c.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export type StorefrontClient = {
   getMenu(options?: RequestOptions): Promise<Menu>;
   quoteCart(input: QuoteInput, options?: RequestOptions): Promise<Quote>;
+  /**
+   * Cria o pedido (idempotente). Falhas de negócio (restaurante fechado, abaixo do mínimo, item
+   * indisponível...) chegam como `StorefrontApiError` com `code: "order_rejected"`, `status: 422` e
+   * `rejections[]`. Nada é cobrado online.
+   */
+  createOrder(input: CreateOrderInput, options?: RequestOptions): Promise<CreatedOrder>;
+  /** Acompanha o pedido pelo código público (sem dados pessoais). `order_not_found` = 404. */
+  trackOrder(publicCode: string, options?: RequestOptions): Promise<TrackedOrder>;
 };
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -63,6 +94,22 @@ function parseDetails(value: unknown): { path: string; message: string }[] | nul
   for (const item of value) {
     if (isRecord(item) && typeof item.path === "string" && typeof item.message === "string") {
       out.push({ path: item.path, message: item.message });
+    }
+  }
+  return out.length > 0 ? out : null;
+}
+
+function parseRejections(value: unknown): OrderRejection[] | null {
+  if (!Array.isArray(value)) return null;
+  const out: OrderRejection[] = [];
+  for (const item of value) {
+    if (isRecord(item) && typeof item.code === "string" && typeof item.message === "string") {
+      out.push({
+        code: item.code,
+        field: typeof item.field === "string" ? item.field : null,
+        itemIndex: typeof item.itemIndex === "number" ? item.itemIndex : null,
+        message: item.message,
+      });
     }
   }
   return out.length > 0 ? out : null;
@@ -83,7 +130,7 @@ export function createStorefrontClient(options: StorefrontClientOptions): Storef
 
   async function request<T>(
     path: string,
-    init: { method: "GET" | "POST"; body?: unknown },
+    init: { method: "GET" | "POST"; body?: unknown; headers?: Record<string, string> },
     callOptions: RequestOptions | undefined,
   ): Promise<T> {
     const controller = new AbortController();
@@ -105,10 +152,11 @@ export function createStorefrontClient(options: StorefrontClientOptions): Storef
         response = await doFetch(`${root}${path}`, {
           method: init.method,
           // GET "simples" (só Accept): o menu não dispara preflight CORS.
-          headers:
-            init.body === undefined
-              ? { Accept: "application/json" }
-              : { Accept: "application/json", "Content-Type": "application/json" },
+          headers: {
+            Accept: "application/json",
+            ...(init.body === undefined ? {} : { "Content-Type": "application/json" }),
+            ...init.headers,
+          },
           body: init.body === undefined ? undefined : JSON.stringify(init.body),
           signal: controller.signal,
         });
@@ -150,6 +198,7 @@ export function createStorefrontClient(options: StorefrontClientOptions): Storef
           {
             retryAfterSeconds: Number.isFinite(retryHeader) && retryHeader > 0 ? retryHeader : null,
             details: parseDetails(error?.details),
+            rejections: parseRejections(error?.errors),
           },
         );
       }
@@ -168,5 +217,19 @@ export function createStorefrontClient(options: StorefrontClientOptions): Storef
     getMenu: (callOptions) => request<Menu>("/menu", { method: "GET" }, callOptions),
     quoteCart: (input, callOptions) =>
       request<Quote>("/cart/quote", { method: "POST", body: input }, callOptions),
+    createOrder: (input, callOptions) => {
+      const { idempotencyKey, ...body } = input;
+      return request<CreatedOrder>(
+        "/orders",
+        {
+          method: "POST",
+          body,
+          headers: { "Idempotency-Key": idempotencyKey ?? newIdempotencyKey() },
+        },
+        callOptions,
+      );
+    },
+    trackOrder: (publicCode, callOptions) =>
+      request<TrackedOrder>(`/orders/${encodeURIComponent(publicCode)}`, { method: "GET" }, callOptions),
   };
 }

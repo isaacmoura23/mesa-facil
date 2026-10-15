@@ -225,12 +225,16 @@ describe("escrita cross-tenant: gestores de A não alteram nada de B", () => {
       const l = await as("managerA").from("product_modifier_groups").insert({ restaurant_id: A().id, product_id: A().productId, group_id: B().modifierGroupId }).select("product_id");
       expect(l.error?.code).toBe("23503");
 
-      // pedido de impressão de A para pedido de B
-      const pj = await as("managerA")
-        .from("print_jobs")
-        .insert({ restaurant_id: A().id, document_type: "KITCHEN_TICKET", order_id: B().orderIds[0], requested_by: world().users.managerA.id, printer_target: "zz-x" })
-        .select("id");
-      expect(pj.error?.code).toBe("23503");
+      // pedido de impressão de A para pedido de B: o INSERT direto do cliente não existe mais (mig. 0116, F-08) ...
+      const row = { restaurant_id: A().id, document_type: "KITCHEN_TICKET", order_id: B().orderIds[0], requested_by: world().users.managerA.id, printer_target: "zz-x" };
+      const pj = await as("managerA").from("print_jobs").insert(row).select("id");
+      expect(pj.error?.code).toBe("42501");
+      // ... a RPC não enxerga o pedido de B ...
+      const rpc = await as("managerA").rpc("request_print", { p_order: B().orderIds[0], p_document_type: "KITCHEN_TICKET" });
+      expect(rpc.error?.message).toMatch(/^ORDER_NOT_FOUND/);
+      // ... e a FK composta continua barrando até o service role
+      const svc = await admin().from("print_jobs").insert(row).select("id");
+      expect(svc.error?.code).toBe("23503");
 
       const stray = await admin().from("print_jobs").select("id").like("printer_target", "zz-%");
       expect(rows(stray)).toHaveLength(0);

@@ -20,7 +20,7 @@ export const checkoutFormSchema = z
       .string()
       .trim()
       .min(2, "Informe seu nome.")
-      .max(120, "Nome muito longo (máximo de 120 caracteres)."),
+      .max(80, "Nome muito longo (máximo de 80 caracteres)."),
     phone: z
       .string()
       .trim()
