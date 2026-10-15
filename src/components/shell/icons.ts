@@ -1,0 +1,40 @@
+import {
+  BookOpen,
+  ChartColumn,
+  ChefHat,
+  ClipboardList,
+  CreditCard,
+  History,
+  Layers,
+  LayoutDashboard,
+  LayoutGrid,
+  LifeBuoy,
+  Receipt,
+  ScrollText,
+  Settings,
+  Store,
+  Users,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
+import type { IconName } from "@/config/navigation";
+
+/** Mapeia nomes serializáveis para ícones (usado só em Client Components). */
+export const NAV_ICONS: Record<IconName, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  orders: ClipboardList,
+  kitchen: ChefHat,
+  tables: LayoutGrid,
+  tabs: Receipt,
+  history: History,
+  menu: BookOpen,
+  customers: Users,
+  reports: ChartColumn,
+  team: UsersRound,
+  restaurant: Store,
+  settings: Settings,
+  plans: Layers,
+  subscriptions: CreditCard,
+  support: LifeBuoy,
+  audit: ScrollText,
+};

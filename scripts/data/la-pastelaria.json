@@ -1,0 +1,1366 @@
+{
+  "_source": "https://la-pastelaria.vercel.app (js/cardapio.js, idêntico ao servido em produção) + pasta local laPastelaria/",
+  "restaurant": {
+    "name": "La Pastelaria",
+    "slug": "la-pastelaria",
+    "timezone": "America/Sao_Paulo"
+  },
+  "settings": {
+    "storefrontUrl": "https://la-pastelaria.vercel.app",
+    "storefrontOrigins": [
+      "https://la-pastelaria.vercel.app"
+    ],
+    "whatsapp": "5585994039523",
+    "phone": null,
+    "addressText": "Tv. Antônio José Corrêa, Praça de Eventos, Centro, Ocara-CE",
+    "fulfillmentTypes": [
+      "DELIVERY",
+      "PICKUP"
+    ],
+    "minOrderCents": null
+  },
+  "deliveryZone": {
+    "name": "Entrega",
+    "feeCents": 200,
+    "demoValue": true
+  },
+  "hours": [
+    {
+      "weekday": 0,
+      "opensAt": "18:30",
+      "closesAt": "23:00"
+    },
+    {
+      "weekday": 2,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 3,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 4,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 5,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 6,
+      "opensAt": "18:30",
+      "closesAt": "23:00"
+    }
+  ],
+  "logoFile": "laPastelaria/assets/img/logo.webp",
+  "modifierGroups": [
+    {
+      "name": "Queijo",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Mussarela",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Coalho",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Recheio",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Carne",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Frango",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Cheddar ou catupiry",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Cheddar",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Catupiry",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Molho",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Cheddar",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "4 queijos",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Sabor (Salgadinhos fritos)",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Carne moída",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Frango",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Carne de sol",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Queijo",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Sabor (Mini pastéis)",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Carne moída",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Frango",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Queijo",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Carne de sol",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Requeijão ou cheddar",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Requeijão",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Cheddar",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Sabor",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Maracujá",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Goiaba",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Graviola",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Acerola",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Cajá",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Manga",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Adoçar com",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Açúcar",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Leite condensado",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Borda recheada",
+      "min": 0,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Catupiry",
+          "priceDeltaCents": 1000
+        },
+        {
+          "name": "Cheddar",
+          "priceDeltaCents": 1000
+        },
+        {
+          "name": "Chocolate ao leite",
+          "priceDeltaCents": 1500
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "name": "Pastéis · Tradicional",
+      "description": "Massa artesanal, frita na hora.",
+      "products": [
+        {
+          "name": "Misto",
+          "description": "Mussarela, presunto e orégano",
+          "priceCents": 1000
+        },
+        {
+          "name": "Mussarela ou Coalho",
+          "description": "Mussarela ou coalho e orégano",
+          "priceCents": 1000,
+          "modifierGroups": [
+            "Queijo"
+          ]
+        },
+        {
+          "name": "Pizza",
+          "description": "Mussarela, presunto, calabresa, molho de tomate, azeitona, orégano e requeijão",
+          "priceCents": 1000
+        },
+        {
+          "name": "Portuguesa",
+          "description": "Mussarela, presunto, ovos, cebola, pimentão, azeitonas e catupiry",
+          "priceCents": 1000
+        },
+        {
+          "name": "4 queijos",
+          "description": "Mussarela, coalho, gorgonzola, parmesão e requeijão",
+          "priceCents": 1000
+        }
+      ]
+    },
+    {
+      "name": "Pastéis · Frango",
+      "description": null,
+      "products": [
+        {
+          "name": "Frango especial",
+          "description": "Frango desfiado, mussarela, milho verde e azeitona",
+          "priceCents": 1200
+        },
+        {
+          "name": "Frango cremoso",
+          "description": "Frango cremoso, ovo, mussarela, milho verde e requeijão",
+          "priceCents": 1200
+        },
+        {
+          "name": "Frango tradicional",
+          "description": "Frango desfiado, mussarela, ovo e requeijão",
+          "priceCents": 1200
+        },
+        {
+          "name": "Frango completo",
+          "description": "Frango desfiado, mussarela, presunto, bacon, milho, ovo e requeijão",
+          "priceCents": 1200
+        }
+      ]
+    },
+    {
+      "name": "Pastéis · Especiais",
+      "description": null,
+      "products": [
+        {
+          "name": "Carne especial",
+          "description": "Carne moída, mussarela, milho verde e azeitona",
+          "priceCents": 1500
+        },
+        {
+          "name": "Carne à bolonhesa",
+          "description": "Carne moída, molho de tomate, mussarela, ovo, parmesão e verdura",
+          "priceCents": 1500
+        },
+        {
+          "name": "Carne tradicional",
+          "description": "Carne moída, mussarela, ovo e requeijão",
+          "priceCents": 1500
+        },
+        {
+          "name": "Carne completo",
+          "description": "Carne moída, mussarela, presunto, bacon, milho, ovo e requeijão",
+          "priceCents": 1500
+        },
+        {
+          "name": "Picante",
+          "description": "Carne moída, molho de tomate, mussarela, pimenta calabresa e requeijão",
+          "priceCents": 1500
+        },
+        {
+          "name": "Calabresa especial",
+          "description": "Calabresa, mussarela, ovo e requeijão",
+          "priceCents": 1500
+        },
+        {
+          "name": "Calabresa bacon",
+          "description": "Calabresa, mussarela, bacon e requeijão",
+          "priceCents": 1500
+        },
+        {
+          "name": "Calabresa tradicional",
+          "description": "Calabresa, mussarela e requeijão",
+          "priceCents": 1500
+        },
+        {
+          "name": "Calabresa completo",
+          "description": "Calabresa, mussarela, presunto, bacon, milho, ovo e requeijão",
+          "priceCents": 1500
+        }
+      ]
+    },
+    {
+      "name": "Pastéis · Premium",
+      "description": null,
+      "products": [
+        {
+          "name": "Cupim",
+          "description": "Cupim desfiado ao molho barbecue, mussarela, bacon e vinagrete",
+          "priceCents": 1800
+        },
+        {
+          "name": "Arretado",
+          "description": "Carne de sol desfiada, mussarela e banana frita caramelizada",
+          "priceCents": 1800
+        },
+        {
+          "name": "Strogonoffe de carne ou frango",
+          "description": "Carne ou frango, mussarela e molho de strogonoffe cremoso",
+          "priceCents": 1800,
+          "modifierGroups": [
+            "Recheio"
+          ]
+        },
+        {
+          "name": "Bauru especial",
+          "description": "Hambúrguer caseiro, bacon, presunto, mussarela, verdura e maionese temperada",
+          "priceCents": 1800,
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Carne de sol especial",
+          "description": "Carne de sol desfiada, mussarela, milho verde e azeitona",
+          "priceCents": 1800
+        },
+        {
+          "name": "Carne de sol bacon",
+          "description": "Carne de sol desfiada, mussarela, bacon e requeijão",
+          "priceCents": 1800
+        },
+        {
+          "name": "Carne de sol tradicional",
+          "description": "Carne de sol desfiada, mussarela, queijo coalho e requeijão",
+          "priceCents": 1800
+        },
+        {
+          "name": "Carne de sol completo",
+          "description": "Carne de sol desfiada, mussarela, presunto, bacon, milho, ovo e requeijão",
+          "priceCents": 1800
+        },
+        {
+          "name": "Camarão",
+          "description": "Camarão, mussarela, molho de alho e parmesão",
+          "priceCents": 1800
+        },
+        {
+          "name": "Camarão especial",
+          "description": "Camarão, mussarela, molho especial, verdura, parmesão e pimenta biquinho",
+          "priceCents": 1800
+        },
+        {
+          "name": "Camarão tradicional",
+          "description": "Camarão alho e óleo, mussarela e requeijão",
+          "priceCents": 1800
+        },
+        {
+          "name": "Camarão do chef",
+          "description": "Camarão empanado frito, mussarela, molho especial e verdura",
+          "priceCents": 1800,
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Tudão",
+          "description": "Mussarela, presunto, bacon, frango cremoso, carne moída, calabresa, milho verde, ovo e requeijão",
+          "priceCents": 1800,
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Picanha",
+          "description": "Tiras de picanha na chapa, mussarela, molho de alho e vinagrete",
+          "priceCents": 1800
+        }
+      ]
+    },
+    {
+      "name": "Pastéis · Doces",
+      "description": null,
+      "products": [
+        {
+          "name": "Chocolate",
+          "description": "Leite condensado, chocolate ao leite e morangos",
+          "priceCents": 1500
+        },
+        {
+          "name": "Banoffe",
+          "description": "Leite condensado, banana caramelizada, canela e doce de leite",
+          "priceCents": 1500
+        },
+        {
+          "name": "Romeu e Julieta",
+          "description": "Goiabada e coalho",
+          "priceCents": 1500
+        },
+        {
+          "name": "Floresta negra",
+          "description": "Brigadeiro e cerejas",
+          "priceCents": 1500
+        },
+        {
+          "name": "Ninho com Oreo",
+          "description": "Brigadeiro de Ninho com Oreo",
+          "priceCents": 1500
+        },
+        {
+          "name": "Ninho com Nutella",
+          "description": "Recheio de Ninho com Nutella",
+          "priceCents": 1500
+        }
+      ]
+    },
+    {
+      "name": "Pizzas · Tradicional",
+      "description": "Tamanhos P e G, com borda recheada opcional. Todas as nossas pizzas contêm queijo mussarela, glúten e orégano.",
+      "products": [
+        {
+          "name": "Mista",
+          "description": "Molho de tomate, mussarela e presunto",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Mussarela",
+          "description": "Molho de tomate, mussarela e tomate",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Calabresa",
+          "description": "Molho de tomate, mussarela, calabresa e cebola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Portuguesa",
+          "description": "Molho de tomate, mussarela, presunto, ovos, cebola, pimentão e azeitonas",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Napolitana",
+          "description": "Molho de tomate, mussarela, tomate, alho frito e manjericão",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Frango requeijão",
+          "description": "Molho de tomate, mussarela, frango desfiado, milho verde e requeijão",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Frango à portuguesa",
+          "description": "Molho de tomate, mussarela, frango desfiado, ovo, milho e bacon",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Paulista",
+          "description": "Molho de tomate, mussarela, presunto, calabresa, ovo, cebola e pimentão",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Picante",
+          "description": "Molho de tomate, mussarela, calabresa picada, pimenta calabresa e cebola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2000
+            },
+            {
+              "name": "G",
+              "priceCents": 3800
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pizzas · Especial",
+      "description": "Todas as nossas pizzas contêm queijo mussarela, glúten e orégano.",
+      "products": [
+        {
+          "name": "4 queijos",
+          "description": "Molho de tomate, mussarela, coalho, provolone e gorgonzola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Do chef",
+          "description": "Molho de tomate, mussarela, presunto, calabresa, frango, bacon, ovo e cebola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "badges": [
+            "NEW"
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Bolonhesa",
+          "description": "Molho de tomate, mussarela, carne moída, ovo, parmesão e cebola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Carne de sol",
+          "description": "Molho de tomate, mussarela, coalho, carne de sol, tomate, cheddar ou catupiry",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Cheddar ou catupiry",
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Camarão",
+          "description": "Molho de tomate, mussarela, camarão, catupiry, alho desidratado e cebola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "À moda da casa",
+          "description": "Molho de tomate, mussarela, presunto, carne de sol, bacon, parmesão, cebola, cheddar ou catupiry",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "badges": [
+            "NEW"
+          ],
+          "modifierGroups": [
+            "Cheddar ou catupiry",
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Bacon especial",
+          "description": "Molho de tomate, mussarela, bacon, parmesão, catupiry e cebola",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pizzas · Doces",
+      "description": "Todas as nossas pizzas contêm queijo mussarela, glúten e orégano.",
+      "products": [
+        {
+          "name": "Chocolate",
+          "description": "Leite condensado, chocolate ao leite e morangos",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Banoffe",
+          "description": "Leite condensado, banana caramelizada, canela e doce de leite",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Romeu e Julieta",
+          "description": "Leite condensado, goiabada e coalho",
+          "variants": [
+            {
+              "name": "P",
+              "priceCents": 2200
+            },
+            {
+              "name": "G",
+              "priceCents": 4500
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Massas · Especiais",
+      "description": "Tamanhos Média e Grande. Massas artesanais.",
+      "products": [
+        {
+          "name": "Bolonhesa",
+          "description": "Carne moída, molho de tomate, queijo parmesão, ovo e orégano",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Strogonoffe",
+          "description": "Carne trinchada na chapa, molho strogonoffe e batata palha",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Frango ao molho",
+          "description": "Frango desfiado ao molho branco, brócolis refogado e milho verde",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Frango com bacon",
+          "description": "Frango desfiado, bacon, molho branco e ovo de codorna",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ],
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Calabresa",
+          "description": "Calabresa refogada, bacon, ovo e molho branco",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Peito de peru",
+          "description": "Peito de peru, brócolis, milho verde e molho branco",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Nordestina",
+          "description": "Carne de sol desfiada, presunto, bacon, coalho e molho branco",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Carne de sol especial",
+          "description": "Carne de sol desfiada, bacon, coalho, molho branco e parmesão",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ]
+        },
+        {
+          "name": "Carne de sol e calabresa",
+          "description": "Carne de sol desfiada, calabresa refogada, bacon e molho branco",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2500
+            }
+          ],
+          "badges": [
+            "NEW"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Massas · Premium",
+      "description": null,
+      "products": [
+        {
+          "name": "Camarão ao molho cheddar ou 4 queijos",
+          "description": "Camarão refogado ao alho e óleo ao molho especial, verduras, parmesão e ovos cozidos",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ],
+          "modifierGroups": [
+            "Molho"
+          ]
+        },
+        {
+          "name": "Camarão ao molho de alho",
+          "description": "Camarão refogado ao alho e óleo ao molho especial, verduras, parmesão e ovos cozidos",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ],
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Camarão especial",
+          "description": "Camarão, mussarela, molho especial, verdura, parmesão e pimenta biquinho",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ],
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Camarão tradicional",
+          "description": "Camarão alho e óleo, mussarela e requeijão",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ]
+        },
+        {
+          "name": "Camarão do chef",
+          "description": "Camarão empanado frito, mussarela, molho branco e verdura",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ],
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Big Bagunça",
+          "description": "Mussarela, presunto, bacon, frango desfiado, carne moída, carne de sol, milho verde, ovo e requeijão",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ],
+          "badges": [
+            "NEW"
+          ]
+        },
+        {
+          "name": "Picanha ao molho de alho",
+          "description": "Picanha em tiras com molho de alho, verduras e parmesão",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ]
+        },
+        {
+          "name": "Picanha ao molho cheddar ou 4 queijos",
+          "description": "Picanha em tiras com molho, verduras e parmesão",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ],
+          "badges": [
+            "NEW"
+          ],
+          "modifierGroups": [
+            "Molho"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Massas · Yakissoba",
+      "description": null,
+      "products": [
+        {
+          "name": "Carne",
+          "description": "Tiras de carne refogadas, verduras, brócolis, cenoura, repolho e molho shoyu",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ]
+        },
+        {
+          "name": "Frango",
+          "description": "Cubos de frango refogado, verduras, brócolis, cenoura, repolho e molho shoyu",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ]
+        },
+        {
+          "name": "Camarão",
+          "description": "Camarões refogados, verduras, brócolis, cenoura, repolho e molho shoyu",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ]
+        },
+        {
+          "name": "Trio (carne, frango e camarão)",
+          "description": "Camarões, cubos de frango e tiras de carne refogados, verduras, brócolis, cenoura, repolho e molho shoyu",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 2800
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Massas · Lasanhas",
+      "description": null,
+      "products": [
+        {
+          "name": "4 queijos",
+          "description": "Molho branco, parmesão, requeijão, mussarela e gorgonzola",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3500
+            }
+          ]
+        },
+        {
+          "name": "Bolonhesa",
+          "description": "Molho de tomate, molho branco, carne moída, mussarela, presunto, ovo e orégano",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3500
+            }
+          ]
+        },
+        {
+          "name": "Frango",
+          "description": "Frango desfiado ao creme branco, mussarela, milho verde e ovo cozido",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3500
+            }
+          ]
+        },
+        {
+          "name": "Carne de sol",
+          "description": "Carne de sol desfiada, molho branco, queijo coalho, mussarela, presunto, requeijão, parmesão e ovo cozido",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 2800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3500
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Massas · Lasanha especial",
+      "description": null,
+      "products": [
+        {
+          "name": "Camarão",
+          "description": "Camarão ao molho branco, mussarela, presunto e parmesão",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3500
+            },
+            {
+              "name": "Grande",
+              "priceCents": 4000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Porções",
+      "description": "Para dividir (ou não).",
+      "products": [
+        {
+          "name": "Salgadinhos fritos (20 und)",
+          "description": "Carne moída, frango, carne de sol ou queijo",
+          "priceCents": 1500,
+          "modifierGroups": [
+            "Sabor (Salgadinhos fritos)"
+          ]
+        },
+        {
+          "name": "Mini pastéis (16 und)",
+          "description": "Carne moída, frango, queijo ou carne de sol",
+          "priceCents": 1500,
+          "modifierGroups": [
+            "Sabor (Mini pastéis)"
+          ]
+        },
+        {
+          "name": "Batata frita tradicional",
+          "description": "300 g de batata frita com parmesão",
+          "priceCents": 1300
+        },
+        {
+          "name": "Batata frita gourmet",
+          "description": "300 g de batata frita com parmesão, bacon, calabresa, requeijão ou cheddar",
+          "priceCents": 1700,
+          "modifierGroups": [
+            "Requeijão ou cheddar"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sucos e vitaminas",
+      "description": "Sucos e vitaminas de fruta, feitos na hora. Sabores: maracujá, goiaba, graviola, acerola, cajá e manga.",
+      "products": [
+        {
+          "name": "Suco copo 400 ml",
+          "description": "Escolha o sabor",
+          "priceCents": 750,
+          "modifierGroups": [
+            "Sabor"
+          ]
+        },
+        {
+          "name": "Vitamina copo 400 ml",
+          "description": "Escolha o sabor",
+          "priceCents": 850,
+          "modifierGroups": [
+            "Sabor"
+          ]
+        },
+        {
+          "name": "Jarra 1 litro",
+          "description": "Escolha o sabor",
+          "priceCents": 1800,
+          "modifierGroups": [
+            "Sabor"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sucos especiais",
+      "description": "Adoçado com açúcar ou leite condensado, você escolhe.",
+      "products": [
+        {
+          "name": "Limonada com hortelã",
+          "description": "Copo de 400 ml",
+          "priceCents": 1000,
+          "modifierGroups": [
+            "Adoçar com"
+          ]
+        },
+        {
+          "name": "Laranja",
+          "description": "Copo de 400 ml",
+          "priceCents": 1000,
+          "modifierGroups": [
+            "Adoçar com"
+          ]
+        },
+        {
+          "name": "Morango",
+          "description": "Copo de 400 ml",
+          "priceCents": 1000,
+          "modifierGroups": [
+            "Adoçar com"
+          ]
+        },
+        {
+          "name": "Frutas vermelhas",
+          "description": "Copo de 400 ml",
+          "priceCents": 1000,
+          "modifierGroups": [
+            "Adoçar com"
+          ]
+        },
+        {
+          "name": "Limonada de maracujá",
+          "description": "Copo de 400 ml",
+          "priceCents": 1000,
+          "modifierGroups": [
+            "Adoçar com"
+          ]
+        }
+      ]
+    }
+  ]
+}

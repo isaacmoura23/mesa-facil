@@ -1,0 +1,920 @@
+{
+  "_source": "https://onailton.vercel.app (public/js/data.js, idêntico ao /api/catalogo em produção) + pasta local nai/",
+  "restaurant": {
+    "name": "Pastelaria e Pizzaria O Nailton",
+    "slug": "o-nailton",
+    "timezone": "America/Sao_Paulo"
+  },
+  "settings": {
+    "storefrontUrl": "https://onailton.vercel.app",
+    "storefrontOrigins": [
+      "https://onailton.vercel.app"
+    ],
+    "whatsapp": "5585994449931",
+    "phone": null,
+    "addressText": "Tv. Chico Moura, 28, Centro, Ocara/CE, 62750-000",
+    "fulfillmentTypes": [
+      "DELIVERY",
+      "PICKUP"
+    ],
+    "minOrderCents": null
+  },
+  "deliveryZone": {
+    "name": "Entrega",
+    "feeCents": 200,
+    "demoValue": true
+  },
+  "hours": [
+    {
+      "weekday": 0,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 1,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 2,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 3,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 4,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 5,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    },
+    {
+      "weekday": 6,
+      "opensAt": "18:30",
+      "closesAt": "22:30"
+    }
+  ],
+  "logoFile": "nai/public/assets/img/logo.webp",
+  "modifierGroups": [
+    {
+      "name": "Adicionais (Pequeno)",
+      "min": 0,
+      "max": 8,
+      "modifiers": [
+        {
+          "name": "Ovo",
+          "priceDeltaCents": 200
+        },
+        {
+          "name": "Cheddar",
+          "priceDeltaCents": 100
+        },
+        {
+          "name": "Catupiry",
+          "priceDeltaCents": 100
+        },
+        {
+          "name": "Milho",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Verdura",
+          "priceDeltaCents": 50
+        },
+        {
+          "name": "Queijo",
+          "priceDeltaCents": 100
+        },
+        {
+          "name": "Calabresa",
+          "priceDeltaCents": 100
+        },
+        {
+          "name": "Mussarela",
+          "priceDeltaCents": 150
+        }
+      ]
+    },
+    {
+      "name": "Adicionais (Grande)",
+      "min": 0,
+      "max": 8,
+      "modifiers": [
+        {
+          "name": "Ovo",
+          "priceDeltaCents": 200
+        },
+        {
+          "name": "Cheddar",
+          "priceDeltaCents": 150
+        },
+        {
+          "name": "Catupiry",
+          "priceDeltaCents": 150
+        },
+        {
+          "name": "Milho",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Verdura",
+          "priceDeltaCents": 50
+        },
+        {
+          "name": "Queijo",
+          "priceDeltaCents": 150
+        },
+        {
+          "name": "Calabresa",
+          "priceDeltaCents": 150
+        },
+        {
+          "name": "Mussarela",
+          "priceDeltaCents": 250
+        }
+      ]
+    },
+    {
+      "name": "Borda recheada",
+      "min": 0,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Borda de catupiry",
+          "priceDeltaCents": 500
+        },
+        {
+          "name": "Borda de cheddar",
+          "priceDeltaCents": 500
+        },
+        {
+          "name": "Borda 4 queijos",
+          "priceDeltaCents": 500
+        },
+        {
+          "name": "Borda de chocolate",
+          "priceDeltaCents": 900
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "name": "Pastéis",
+      "description": "Massa fina e crocante, frita na hora. Tamanho pequeno ou grande, com adicionais à vontade.",
+      "products": [
+        {
+          "name": "Pastel de Presunto",
+          "description": "Presunto fatiado bem servido dentro da massa crocante. Simples e certeiro.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 550
+            },
+            {
+              "name": "Grande",
+              "priceCents": 650
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Calabresa",
+          "description": "Calabresa picadinha, com aquele sabor defumado que combina com massa frita.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 650
+            },
+            {
+              "name": "Grande",
+              "priceCents": 800
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Queijo",
+          "description": "Queijo derretido que puxa no primeiro pedaço. O clássico da pastelaria.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 650
+            },
+            {
+              "name": "Grande",
+              "priceCents": 800
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel Misto",
+          "description": "Queijo e presunto juntos. A dupla que nunca erra.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 650
+            },
+            {
+              "name": "Grande",
+              "priceCents": 800
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Frango",
+          "description": "Frango desfiado e temperado, recheio suculento do começo ao fim.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 650
+            },
+            {
+              "name": "Grande",
+              "priceCents": 800
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Carne",
+          "description": "Carne moída bem temperada. O pastel de feira do jeito que tem que ser.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 700
+            },
+            {
+              "name": "Grande",
+              "priceCents": 850
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Mussarela",
+          "description": "Recheado só de mussarela, para quem gosta de queijo derretido de verdade.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 700
+            },
+            {
+              "name": "Grande",
+              "priceCents": 850
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel Mistão",
+          "description": "Presunto, calabresa, queijo e frango. Quatro recheios num pastel só.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 1000
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel Pizza",
+          "description": "Calabresa, queijo, catupiry e orégano. O sabor da pizza dentro do pastel.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 1000
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Carne do Sol",
+          "description": "Carne do sol desfiada, o sabor do sertão dentro do pastel.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 850
+            },
+            {
+              "name": "Grande",
+              "priceCents": 1100
+            }
+          ],
+          "badges": [
+            "REGIONAL"
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel Mistão de Pizza",
+          "description": "Presunto, calabresa, queijo, frango, carne, catupiry e orégano. O mais recheado do cardápio.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 1000
+            },
+            {
+              "name": "Grande",
+              "priceCents": 1250
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel Mistão Carne do Sol",
+          "description": "Carne do sol, calabresa e mussarela. Forte, salgado na medida e cheio de queijo.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 1200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 1500
+            }
+          ],
+          "modifierGroups": [
+            "Adicionais (Pequeno)",
+            "Adicionais (Grande)"
+          ]
+        },
+        {
+          "name": "Pastel de Chocolate",
+          "description": "Chocolate com queijo, o doce e salgado que vicia. Ótimo para fechar o pedido.",
+          "variants": [
+            {
+              "name": "Pequeno",
+              "priceCents": 800
+            },
+            {
+              "name": "Grande",
+              "priceCents": 1000
+            }
+          ],
+          "badges": [
+            "SWEET"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pizzas",
+      "description": "Todas levam mussarela, azeitona e orégano. Tamanho médio ou grande, com borda recheada opcional.",
+      "products": [
+        {
+          "name": "Pizza de Calabresa",
+          "description": "Mussarela, calabresa, cebola, azeitona, milho e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza Mista",
+          "description": "Mussarela, calabresa, presunto, cebola, milho, azeitona e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza de Mussarela",
+          "description": "Mussarela, cebola, milho, azeitona e orégano. A tradicional que agrada todo mundo.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza de Frango",
+          "description": "Mussarela, frango, cebola, azeitona e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza de Frango com Catupiry",
+          "description": "Mussarela, frango, catupiry, milho, cebola, azeitona e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza Portuguesa",
+          "description": "Mussarela, presunto, ovos, cebola, milho, azeitona e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza 4 Queijos",
+          "description": "Mussarela, queijo, catupiry e cheddar, com cebola, milho, azeitona e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3100
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3400
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza à Moda",
+          "description": "A mais completa das tradicionais: mussarela, presunto, frango, calabresa, azeitona, cebola, milho e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3600
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza de Bacon",
+          "description": "Mussarela, bacon, cebola, milho, azeitona e orégano.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3600
+            }
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza Baiana",
+          "description": "Mussarela, carne moída, molho de pimenta, tomate, cebola, azeitona e orégano. Tem ardência.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3200
+            },
+            {
+              "name": "Grande",
+              "priceCents": 3600
+            }
+          ],
+          "badges": [
+            "SPICY"
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        },
+        {
+          "name": "Pizza de Carne do Sol",
+          "description": "Mussarela, carne do sol, milho, azeitona e orégano. A pizza com cara de Ceará.",
+          "variants": [
+            {
+              "name": "Média",
+              "priceCents": 3500
+            },
+            {
+              "name": "Grande",
+              "priceCents": 4000
+            }
+          ],
+          "badges": [
+            "REGIONAL"
+          ],
+          "modifierGroups": [
+            "Borda recheada"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 200 ml",
+      "description": "Bem gelados, do 200 ml ao 2,5 litros.",
+      "products": [
+        {
+          "name": "Pepsi 200 ml",
+          "description": "Garrafinha de Pepsi, na medida para acompanhar um pastel.",
+          "priceCents": 300,
+          "imageFile": "nai/public/assets/img/bebidas/pepsi-200.webp"
+        },
+        {
+          "name": "Guaraná Antarctica 200 ml",
+          "description": "Garrafinha de Guaraná Antarctica, gelada.",
+          "priceCents": 300,
+          "imageFile": "nai/public/assets/img/bebidas/guarana-200.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 250 ml",
+      "description": null,
+      "products": [
+        {
+          "name": "Fanta Laranja 250 ml",
+          "description": "Garrafinha de Fanta sabor laranja.",
+          "priceCents": 350,
+          "imageFile": "nai/public/assets/img/bebidas/fanta-laranja-250.webp"
+        },
+        {
+          "name": "Fanta Uva 250 ml",
+          "description": "Garrafinha de Fanta sabor uva.",
+          "priceCents": 350,
+          "imageFile": "nai/public/assets/img/bebidas/fanta-uva-250.webp"
+        },
+        {
+          "name": "São Geraldo Caju 250 ml",
+          "description": "Refrigerante de caju São Geraldo, o sabor cearense em garrafinha.",
+          "priceCents": 350,
+          "imageFile": "nai/public/assets/img/bebidas/sao-geraldo-250.webp"
+        },
+        {
+          "name": "Coca-Cola Sem Açúcar 250 ml",
+          "description": "Garrafinha de Coca-Cola sem açúcar.",
+          "priceCents": 350,
+          "imageFile": "nai/public/assets/img/bebidas/coca-zero-250.webp"
+        },
+        {
+          "name": "Coca-Cola 250 ml",
+          "description": "Garrafinha de Coca-Cola original.",
+          "priceCents": 350,
+          "imageFile": "nai/public/assets/img/bebidas/coca-250.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · Lata 350 ml",
+      "description": null,
+      "products": [
+        {
+          "name": "Fanta Laranja lata",
+          "description": "Lata de 350 ml de Fanta laranja.",
+          "priceCents": 600,
+          "imageFile": "nai/public/assets/img/bebidas/fanta-laranja-lata.webp"
+        },
+        {
+          "name": "Fanta Uva lata",
+          "description": "Lata de 350 ml de Fanta uva.",
+          "priceCents": 600,
+          "imageFile": "nai/public/assets/img/bebidas/fanta-uva-lata.webp"
+        },
+        {
+          "name": "Coca-Cola lata",
+          "description": "Lata de 350 ml de Coca-Cola original.",
+          "priceCents": 600,
+          "imageFile": "nai/public/assets/img/bebidas/coca-lata.webp"
+        },
+        {
+          "name": "Pepsi lata",
+          "description": "Lata de 350 ml de Pepsi.",
+          "priceCents": 600,
+          "imageFile": "nai/public/assets/img/bebidas/pepsi-lata.webp"
+        },
+        {
+          "name": "Guaraná Antarctica lata",
+          "description": "Lata de 350 ml de Guaraná Antarctica.",
+          "priceCents": 600,
+          "imageFile": "nai/public/assets/img/bebidas/guarana-lata.webp"
+        },
+        {
+          "name": "São Geraldo Caju lata",
+          "description": "Lata de 350 ml do refrigerante de caju São Geraldo.",
+          "priceCents": 600,
+          "imageFile": "nai/public/assets/img/bebidas/sao-geraldo-lata.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 600 ml",
+      "description": null,
+      "products": [
+        {
+          "name": "São Geraldo Caju 600 ml (vidro)",
+          "description": "A tradicional garrafa de vidro verde do refrigerante de caju São Geraldo.",
+          "priceCents": 800,
+          "imageFile": "nai/public/assets/img/bebidas/sao-geraldo-600.webp"
+        },
+        {
+          "name": "Coca-Cola 600 ml",
+          "description": "Garrafa de 600 ml de Coca-Cola original.",
+          "priceCents": 700,
+          "imageFile": "nai/public/assets/img/bebidas/coca-600.webp"
+        },
+        {
+          "name": "Guaraná Antarctica 600 ml",
+          "description": "Garrafa de 600 ml de Guaraná Antarctica.",
+          "priceCents": 700,
+          "imageFile": "nai/public/assets/img/bebidas/guarana-600.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 1 litro",
+      "description": null,
+      "products": [
+        {
+          "name": "São Geraldo Caju 1 L",
+          "description": "Refrigerante de caju São Geraldo, garrafa de 1 litro.",
+          "priceCents": 1000,
+          "imageFile": "nai/public/assets/img/bebidas/sao-geraldo-1l.webp"
+        },
+        {
+          "name": "Coca-Cola 1 L (vidro)",
+          "description": "Coca-Cola original na garrafa de vidro de 1 litro.",
+          "priceCents": 900,
+          "imageFile": "nai/public/assets/img/bebidas/coca-1l.webp"
+        },
+        {
+          "name": "Guaraná Antarctica 1 L",
+          "description": "Guaraná Antarctica, garrafa de 1 litro.",
+          "priceCents": 900,
+          "imageFile": "nai/public/assets/img/bebidas/guarana-1l.webp"
+        },
+        {
+          "name": "Pepsi 1 L",
+          "description": "Pepsi, garrafa de 1 litro.",
+          "priceCents": 900,
+          "imageFile": "nai/public/assets/img/bebidas/pepsi-1l.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 1,5 litro",
+      "description": null,
+      "products": [
+        {
+          "name": "Guaraná Antarctica 1,5 L",
+          "description": "Guaraná Antarctica, garrafa de 1,5 litro.",
+          "priceCents": 1000,
+          "imageFile": "nai/public/assets/img/bebidas/guarana-1-5l.webp"
+        },
+        {
+          "name": "Coca-Cola 1,5 L",
+          "description": "Coca-Cola original, garrafa de 1,5 litro.",
+          "priceCents": 1200,
+          "imageFile": "nai/public/assets/img/bebidas/coca-1-5l.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 2 litros",
+      "description": null,
+      "products": [
+        {
+          "name": "Coca-Cola 2 L",
+          "description": "Coca-Cola original, garrafa de 2 litros. Boa para dividir com a pizza.",
+          "priceCents": 1500,
+          "imageFile": "nai/public/assets/img/bebidas/coca-2l.webp"
+        },
+        {
+          "name": "São Geraldo Caju 2 L",
+          "description": "Refrigerante de caju São Geraldo, garrafa de 2 litros.",
+          "priceCents": 1500,
+          "imageFile": "nai/public/assets/img/bebidas/sao-geraldo-2l.webp"
+        },
+        {
+          "name": "Sukita Laranja 2 L",
+          "description": "Sukita sabor laranja, garrafa de 2 litros.",
+          "priceCents": 1000,
+          "imageFile": "nai/public/assets/img/bebidas/sukita-2l.webp"
+        }
+      ]
+    },
+    {
+      "name": "Refrigerantes · 2,5 litros",
+      "description": null,
+      "products": [
+        {
+          "name": "Guaraná Antarctica 2,5 L",
+          "description": "Guaraná Antarctica, garrafa de 2,5 litros. Para a família toda.",
+          "priceCents": 1500,
+          "imageFile": "nai/public/assets/img/bebidas/guarana-2-5l.webp"
+        },
+        {
+          "name": "Pepsi 2,5 L",
+          "description": "Pepsi, garrafa de 2,5 litros.",
+          "priceCents": 1500,
+          "imageFile": "nai/public/assets/img/bebidas/pepsi-2-5l.webp"
+        },
+        {
+          "name": "Coca-Cola 2,5 L",
+          "description": "Coca-Cola original, garrafa de 2,5 litros.",
+          "priceCents": 1600,
+          "imageFile": "nai/public/assets/img/bebidas/coca-2-5l.webp"
+        }
+      ]
+    },
+    {
+      "name": "Sucos e vitaminas · Copo de suco 400 ml",
+      "description": "Feitos na hora com polpa de fruta. Copo de 400 ml ou jarra de suco natural. Feito com polpa de fruta",
+      "products": [
+        {
+          "name": "Suco de Maracujá",
+          "description": "Azedinho e refrescante, batido na hora com polpa de maracujá.",
+          "priceCents": 500
+        },
+        {
+          "name": "Suco de Manga",
+          "description": "Doce e encorpado, com polpa de manga.",
+          "priceCents": 500
+        },
+        {
+          "name": "Suco de Abacaxi",
+          "description": "Leve e cítrico, com polpa de abacaxi.",
+          "priceCents": 500
+        },
+        {
+          "name": "Suco de Acerola",
+          "description": "Vermelhinho e cheio de vitamina C, com polpa de acerola.",
+          "priceCents": 500
+        },
+        {
+          "name": "Suco de Goiaba",
+          "description": "Cremoso e docinho, com polpa de goiaba.",
+          "priceCents": 500
+        },
+        {
+          "name": "Suco de Graviola",
+          "description": "Suave e aveludado, com polpa de graviola.",
+          "priceCents": 500
+        }
+      ]
+    },
+    {
+      "name": "Sucos e vitaminas · Jarra de suco natural",
+      "description": "Feito com a fruta",
+      "products": [
+        {
+          "name": "Jarra de Suco de Maracujá",
+          "description": "Suco feito com a fruta, na jarra. Escolha 600 ml ou 1 litro.",
+          "variants": [
+            {
+              "name": "600 ml",
+              "priceCents": 700
+            },
+            {
+              "name": "1 litro",
+              "priceCents": 900
+            }
+          ],
+          "imageFile": "nai/public/assets/img/jarra-1l.webp"
+        }
+      ]
+    },
+    {
+      "name": "Sucos e vitaminas · Copo de vitamina 400 ml",
+      "description": "Feita com polpa de fruta",
+      "products": [
+        {
+          "name": "Vitamina de Acerola",
+          "description": "Cremosa e vermelhinha, batida com polpa de acerola.",
+          "priceCents": 700
+        },
+        {
+          "name": "Vitamina de Goiaba",
+          "description": "Encorpada e doce, batida com polpa de goiaba.",
+          "priceCents": 700
+        },
+        {
+          "name": "Vitamina de Graviola",
+          "description": "Suave e cremosa, batida com polpa de graviola.",
+          "priceCents": 700
+        },
+        {
+          "name": "Vitamina de Manga",
+          "description": "Bem amarelinha e cremosa, batida com polpa de manga.",
+          "priceCents": 700
+        },
+        {
+          "name": "Vitamina de Maracujá",
+          "description": "Cremosa com o azedinho do maracujá.",
+          "priceCents": 800
+        },
+        {
+          "name": "Vitamina de Morango",
+          "description": "Rosinha e cremosa, batida com polpa de morango.",
+          "priceCents": 800
+        }
+      ]
+    }
+  ]
+}

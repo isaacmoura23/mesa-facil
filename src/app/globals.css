@@ -1,0 +1,175 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de tema. Um único acento (verde-floresta), neutros frios e
+ * semânticas de status. O tema segue prefers-color-scheme.
+ * Contraste conferido: texto/fundo >= 7:1, muted/fundo >= 4.5:1,
+ * accent-foreground/accent >= 4.5:1 nos dois temas.
+ */
+:root {
+  color-scheme: light dark;
+
+  --bg: #f6f7f8;
+  --surface: #fcfcfd;
+  --surface-2: #eff1f3;
+  --line: #dcdfe4;
+  --line-strong: #c4c9d0;
+  --fg: #16181d;
+  --muted: #4b5260;
+
+  --accent: #0b6b4b;
+  --accent-hover: #095a3f;
+  --accent-fg: #f4fbf8;
+  --accent-soft: #e2f4ec;
+  --accent-soft-fg: #08523a;
+
+  --danger: #b42318;
+  --danger-hover: #971c12;
+  --danger-fg: #fff8f7;
+  --danger-soft: #fdeceb;
+  --danger-soft-fg: #912018;
+
+  --warning-soft: #fdf3dc;
+  --warning-soft-fg: #7a4a04;
+
+  --info-soft: #e6eefb;
+  --info-soft-fg: #1f4a96;
+
+  --ring: #0b6b4b;
+  --shadow-tint: 22 24 29;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0f12;
+    --surface: #15181c;
+    --surface-2: #1d2126;
+    --line: #2a2f36;
+    --line-strong: #3a414a;
+    --fg: #eceef1;
+    --muted: #a3abb7;
+
+    --accent: #3fcf9b;
+    --accent-hover: #5fdcb0;
+    --accent-fg: #04241a;
+    --accent-soft: #12332a;
+    --accent-soft-fg: #8ee6c3;
+
+    --danger: #f2766b;
+    --danger-hover: #f79189;
+    --danger-fg: #2a0805;
+    --danger-soft: #3a1714;
+    --danger-soft-fg: #ffb4ad;
+
+    --warning-soft: #3a2a0b;
+    --warning-soft-fg: #f4c767;
+
+    --info-soft: #172640;
+    --info-soft-fg: #a9c4f5;
+
+    --ring: #3fcf9b;
+    --shadow-tint: 0 0 0;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-fg: var(--accent-soft-fg);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-fg: var(--danger-soft-fg);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-fg: var(--warning-soft-fg);
+  --color-info-soft: var(--info-soft);
+  --color-info-soft-fg: var(--info-soft-fg);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Escala de raios: controles 10px, cartões 16px, pílulas só em badges. */
+  --radius-control: 0.625rem;
+  --radius-card: 1rem;
+
+  --shadow-card: 0 1px 2px rgb(var(--shadow-tint) / 0.06),
+    0 4px 14px -6px rgb(var(--shadow-tint) / 0.1);
+  --shadow-pop: 0 12px 40px -12px rgb(var(--shadow-tint) / 0.35);
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* Diálogos nativos (<dialog>) */
+dialog::backdrop {
+  background: rgb(8 10 12 / 0.55);
+}
+
+dialog {
+  color: var(--fg);
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
