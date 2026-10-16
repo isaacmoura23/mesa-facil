@@ -170,3 +170,40 @@ Telas `/operacao/[slug]/{pedidos,cozinha,historico}`; leitura direta das tabelas
 - **ORDERS**: `src/modules/orders-server/**`, `src/modules/storefront/**`, `src/components/storefront/**`, `src/app/r/**`, `src/app/api/public/v1/restaurants/[slug]/orders/**`, `src/modules/public-api/**`, `sdk/**`.
 - **OPS-B** (após OPS-A): `src/app/operacao/[slug]/{cozinha,historico}/**`, `src/modules/printing/**`, `src/components/printing/**`.
 - **TESTS3** (por último): `tests/**`, `scripts/**`.
+
+---
+
+# Fase 4 — Mesas, comandas de consumo e pagamento manual (contrato)
+
+Regras: estados separados (mesa AVAILABLE|OCCUPIED|CLEANING|INACTIVE; comanda OPEN|CLOSED|CANCELLED; pedido; pagamento). Uma comanda OPEN por mesa
+(índice parcial já existente; `restaurant_settings.single_tab_per_table`). Pedido de salão = `fulfillment_type='DINE_IN'` ligado a `tab_id`
+(mesa opcional: comanda de balcão com `label`). Pagamento é **registro manual** feito por equipe com `payments.record` (sem provedor online).
+O dono NÃO opera: só lê comandas/mesas em `/app/[slug]`; cadastra/edita mesas (`tables.manage`). Pedido do salão nasce `CONFIRMED` (a equipe já aceitou) e vai para a cozinha.
+Divisão de conta por pessoa e pagamento misto avançado ficam fora do MVP (vários pagamentos parciais na mesma comanda são permitidos).
+
+## RPCs (DB-6, migrações `20260101000117+`; SECURITY DEFINER, `search_path=''`, authenticated; permissões validadas dentro; erros por exceção `CODIGO: texto`)
+
+- `open_tab(p_restaurant uuid, p_table_id uuid default null, p_label text default null, p_guests int default null) returns jsonb` — `tabs.manage`; mesa deve estar AVAILABLE (ou CLEANING se o restaurante permitir? não: só AVAILABLE) e ativa; violação da regra → `TABLE_HAS_OPEN_TAB`/`TABLE_INACTIVE`; mesa vira OCCUPIED (triggers existentes); retorna a comanda.
+- `create_staff_order(p_tab uuid, p_items jsonb /*como validate_cart: product_id,variant_id?,quantity,modifier_ids,notes?*/, p_notes text default null) returns jsonb` — `orders.create` + `tabs.manage`; comanda OPEN; recalcula via `price_cart` (ignora horário de funcionamento e `accepts_orders` para equipe, mas exige restaurante `active`, produtos/variantes/adicionais válidos); cria `orders` DINE_IN (`tab_id`, `table_label` snapshot, `source='STAFF'`), itens com snapshots, status `CONFIRMED`, histórico por `auth.uid()`; vários pedidos por comanda; devolve pedido + saldo da comanda.
+- `get_tab_balance(p_tab uuid) returns jsonb` — `tabs.view`; `{tab, orders:[{id,order_number,status,total_cents}], consumed_cents (exclui cancelados/recusados), paid_cents (pagamentos PAID), remaining_cents, payments:[...]}`.
+- `record_payment(p_tab uuid default null, p_order uuid default null, p_method text, p_amount_cents int, p_tendered_cents int default null, p_reference text default null) returns jsonb` — `payments.record`; exatamente um alvo; métodos CASH|PIX|CREDIT|DEBIT|VOUCHER|OTHER; valor > 0 e ≤ saldo restante (`OVERPAYMENT`); `p_tendered_cents` só CASH ≥ valor (troco calculado e retornado); status PAID; recalcula `payment_status` do pedido; idempotência opcional por `p_reference`; auditoria. Para pedidos DELIVERY/PICKUP também aceita `p_order` (pagamento na entrega/retirada).
+- `close_tab(p_tab uuid, p_unpaid_reason text default null) returns jsonb` — `tabs.manage`; exige todos os pedidos em estado terminal ou cancelável (os ativos não-cancelados devem estar `COMPLETED`/`READY`... defina: todos `COMPLETED` ou `CANCELLED`/`REJECTED`; pedidos de salão ativos são concluídos automaticamente ao fechar? NÃO — erro `TAB_HAS_OPEN_ORDERS`), saldo zero (`TAB_UNPAID`) — exceção: com `p_unpaid_reason` (≥10 chars) e permissão `payments.record`+`tabs.manage` fecha com saldo e grava auditoria; calcula `total_cents`, `closed_at/closed_by`; mesa → CLEANING (se última comanda aberta da mesa).
+- `cancel_tab(p_tab uuid, p_reason text)` — só comanda sem pedidos ativos/pagamentos; mesa volta AVAILABLE.
+- `set_table_status(p_table uuid, p_to text) returns jsonb` — `tables.operate`: CLEANING→AVAILABLE; `tables.manage`: AVAILABLE↔INACTIVE; nunca com comanda aberta.
+- `request_tab_print(p_tab uuid, p_document_type text /*PARTIAL_BILL|FINAL_BILL*/) returns jsonb` — `print.request`; payload montado no servidor (restaurante, comanda/mesa, data/hora local, pedidos e itens consolidados com variante/adicionais, subtotal, pagamentos registrados, saldo; sem telefone/e-mail); grava `print_jobs` REQUESTED; FINAL_BILL só se a comanda estiver OPEN ou CLOSED; `mark_print_job` já existe.
+- F-03: `restaurant_tables.qr_token` deixa de ser gravável por clientes (gerado só no servidor; `rotate_table_qr(p_table)` com `tables.manage`).
+- Realtime: `tabs`, `restaurant_tables`, `orders`, `payments` na publication (adicionar `payments` se faltar).
+
+## UI
+
+- **OPS-C1** `/operacao/[slug]/mesas` e `/comandas`: grade de mesas por estado (tempo real), abrir comanda, abrir comanda de balcão, abrir detalhe da comanda, liberar mesa limpa; detalhe da comanda com pedidos/itens, "Adicionar itens" (seletor de cardápio com variantes/adicionais → `create_staff_order`), e um slot `TabBillingPanel`.
+- **OPS-C2** `src/components/tab-billing/tab-billing-panel.tsx` (props `{restaurantId, tabId, permissions, onChanged}`): saldo, registrar pagamento (forma, valor, troco), imprimir conta parcial/final (reutiliza `src/modules/printing`, estendido com PARTIAL_BILL/FINAL_BILL), fechar comanda (com justificativa quando houver saldo), cancelar comanda vazia.
+- **ADMIN-T** `/app/[slug]/mesas` (cadastro: nome, capacidade, ativar/inativar via `tables.manage`, QR rotate; mostra estado e comanda aberta SOMENTE leitura) e `/app/[slug]/comandas` (lista aberta/fechada, detalhe somente leitura, sem botões operacionais).
+
+## Divisão
+
+- **DB-6**: `supabase/migrations/20260101000117+`.
+- **OPS-C1**: `src/app/operacao/[slug]/{mesas,comandas}/**`, `src/modules/tables/**`, `src/components/tables/**`.
+- **OPS-C2**: `src/components/tab-billing/**`, `src/modules/tab-billing/**`, `src/modules/printing/**`, `src/components/printing/**`.
+- **ADMIN-T**: `src/app/app/[slug]/{mesas,comandas}/**`, `src/modules/tables-admin/**`, `src/components/tables-admin/**`.
+- **TESTS4** (por último): `tests/**`, `scripts/**`.

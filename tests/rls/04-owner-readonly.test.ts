@@ -122,18 +122,20 @@ describe("dono NÃO opera comandas", () => {
 });
 
 describe("dono NÃO muda o estado operacional das mesas", () => {
-  const transitions: Array<[string, string]> = [
-    ["AVAILABLE", "OCCUPIED"],
-    ["OCCUPIED", "CLEANING"],
-    ["OCCUPIED", "AVAILABLE"],
-    ["CLEANING", "AVAILABLE"],
-    ["CLEANING", "OCCUPIED"],
+  // Fase 4 (mig. 0121/0120): o status da mesa só muda por set_table_status (e pelos triggers da comanda).
+  // OCCUPIED/CLEANING nem são destinos aceitos (vêm só de open_tab/close_tab); CLEANING/OCCUPIED -> AVAILABLE exige tables.operate.
+  const transitions: Array<[string, string, RegExp]> = [
+    ["AVAILABLE", "OCCUPIED", /INVALID_TABLE_STATUS/],
+    ["OCCUPIED", "CLEANING", /INVALID_TABLE_STATUS/],
+    ["OCCUPIED", "AVAILABLE", /FORBIDDEN/],
+    ["CLEANING", "AVAILABLE", /FORBIDDEN/],
+    ["CLEANING", "OCCUPIED", /INVALID_TABLE_STATUS/],
   ];
-  for (const [from, to] of transitions) {
-    it(`${from} -> ${to}: negado (requer tables.operate) e mesa inalterada`, async () => {
+  for (const [from, to, rule] of transitions) {
+    it(`${from} -> ${to}: set_table_status recusa (${rule.source}) e a mesa fica inalterada; UPDATE direto também é negado`, async () => {
       const table = await makeTable(cleanup, A().id, { status: from });
-      const res = await as("ownerA").from("restaurant_tables").update({ status: to }).eq("id", table.id).select("id");
-      expectRule(res, /FORBIDDEN/);
+      expectRule(await as("ownerA").rpc("set_table_status", { p_table: table.id, p_to: to }), rule);
+      expectDenied(await as("ownerA").from("restaurant_tables").update({ status: to }).eq("id", table.id).select("id"), /42501|permission denied/i);
       expect((await tableRow(table.id)).status).toBe(from);
     });
   }
@@ -147,13 +149,17 @@ describe("dono NÃO muda o estado operacional das mesas", () => {
     expect(rows(await admin().from("restaurant_tables").select("id").eq("id", created.data!.id))).toHaveLength(1);
   });
 
-  it("[comportamento documentado] ativar/desativar (INACTIVE) é cadastro e fica com tables.manage, que o dono tem", async () => {
+  it("[comportamento documentado, F-12] ativar/desativar (INACTIVE) é cadastro e fica com tables.manage, que o dono tem (via set_table_status)", async () => {
     const table = await makeTable(cleanup, A().id, { status: "AVAILABLE" });
-    const off = await as("ownerA").from("restaurant_tables").update({ status: "INACTIVE" }).eq("id", table.id).select("id");
+    const off = await as("ownerA").rpc("set_table_status", { p_table: table.id, p_to: "INACTIVE" });
     expectOk(off);
+    expect(off.data).toMatchObject({ ok: true, unchanged: false, table: { status: "INACTIVE" } });
     expect((await tableRow(table.id)).status).toBe("INACTIVE");
-    const on = await as("ownerA").from("restaurant_tables").update({ status: "AVAILABLE" }).eq("id", table.id).select("id");
+    const on = await as("ownerA").rpc("set_table_status", { p_table: table.id, p_to: "AVAILABLE" });
     expectOk(on);
+    expect((await tableRow(table.id)).status).toBe("AVAILABLE");
+    // o caminho direto (UPDATE de status) deixou de existir para todos os clientes
+    expectDenied(await as("ownerA").from("restaurant_tables").update({ status: "INACTIVE" }).eq("id", table.id).select("id"), /42501|permission denied/i);
     expect((await tableRow(table.id)).status).toBe("AVAILABLE");
   });
 });

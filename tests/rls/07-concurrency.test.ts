@@ -15,10 +15,7 @@ afterAll(() => cleanup.run());
 
 describe("uma comanda aberta por mesa", () => {
   const open = (who: "cashierA" | "waiterA" | "managerA", tableId: string) =>
-    as(who)
-      .from("tabs")
-      .insert({ restaurant_id: A().id, table_id: tableId, status: "OPEN", total_cents: 0, opened_by: world().users[who].id, label: `zz-${uniq()}` })
-      .select("id");
+    as(who).rpc("open_tab", { p_restaurant: A().id, p_table_id: tableId, p_label: `zz-${uniq()}` });
 
   it("duas aberturas simultâneas na mesma mesa: apenas uma sucede", async () => {
     const table = await makeTable(cleanup, A().id);
@@ -27,7 +24,7 @@ describe("uma comanda aberta por mesa", () => {
     const failed = [r1, r2].filter((r) => r.error);
     expect(ok).toHaveLength(1);
     expect(failed).toHaveLength(1);
-    expect(failed[0].error!.code).toBe("23505");
+    expect(failed[0].error!.message).toMatch(/TABLE_HAS_OPEN_TAB/);
     const tabs = await admin().from("tabs").select("id,status").eq("table_id", table.id);
     expect(rows(tabs)).toHaveLength(1);
     expect(rows(tabs)[0].status).toBe("OPEN");
@@ -40,7 +37,7 @@ describe("uma comanda aberta por mesa", () => {
     const who = ["cashierA", "waiterA", "managerA", "cashierA", "waiterA", "managerA", "cashierA", "waiterA"] as const;
     const results = await Promise.all(who.map((w) => open(w, table.id)));
     expect(results.filter((r) => !r.error)).toHaveLength(1);
-    for (const r of results.filter((x) => x.error)) expect(r.error!.code).toBe("23505");
+    for (const r of results.filter((x) => x.error)) expect(r.error!.message).toMatch(/TABLE_HAS_OPEN_TAB/);
     const tabs = await admin().from("tabs").select("id").eq("table_id", table.id).eq("status", "OPEN");
     expect(rows(tabs)).toHaveLength(1);
     cleanup.add(async () => void (await admin().from("tabs").delete().eq("table_id", table.id)));
@@ -51,9 +48,10 @@ describe("uma comanda aberta por mesa", () => {
     const [r1, r2] = await Promise.all([open("cashierA", t1.id), open("waiterA", t2.id)]);
     expectOk(r1 as any);
     expectOk(r2 as any);
-    const first = (r1.data as any)[0].id as string;
+    const first = (r1.data as any).tab.id as string;
     cleanup.add(async () => void (await admin().from("tabs").delete().in("table_id", [t1.id, t2.id])));
-    expectOk(await as("cashierA").from("tabs").update({ status: "CLOSED" }).eq("id", first).select("id") as any);
+    expectOk(await as("cashierA").rpc("close_tab", { p_tab: first }) as any);
+    expectOk(await as("cashierA").rpc("set_table_status", { p_table: t1.id, p_to: "AVAILABLE" }) as any); // CLEANING -> AVAILABLE
     const reopen = await open("waiterA", t1.id);
     expectOk(reopen as any);
   });
@@ -63,7 +61,7 @@ describe("uma comanda aberta por mesa", () => {
     const ta = await makeTable(cleanup, A().id);
     const [ra, rb] = await Promise.all([
       open("cashierA", ta.id),
-      as("cashierB").from("tabs").insert({ restaurant_id: B().id, table_id: tb.id, status: "OPEN", total_cents: 0, opened_by: world().users.cashierB.id, label: `zz-${uniq()}` }).select("id"),
+      as("cashierB").rpc("open_tab", { p_restaurant: B().id, p_table_id: tb.id, p_label: `zz-${uniq()}` }),
     ]);
     expect(ra.error).toBeNull();
     expect(rb.error).toBeNull();

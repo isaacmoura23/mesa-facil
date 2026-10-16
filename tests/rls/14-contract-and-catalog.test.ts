@@ -8,7 +8,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { projectRoot } from "../../scripts/lib/env";
 import { admin, anon, as, world } from "../helpers/clients";
-import { expectOk, rows } from "../helpers/expect";
+import { expectDenied, expectOk, rows } from "../helpers/expect";
 import { dockerAvailable, psql } from "../helpers/psql";
 
 const A = () => world().restaurants.a;
@@ -247,5 +247,93 @@ describe("endurecimento (achados em tests/FINDINGS.md)", () => {
     }
   });
 
-  it.todo("[F-03] restaurant_tables.qr_token deveria ser gerado só pelo servidor (cliente com tables.manage consegue definir/trocar o token; unique global vira oráculo de existência entre tenants)");
+  // F-03 (corrigido na mig. 0117/0121): o cliente nunca define nem troca o qr_token.
+  it("[F-03] restaurant_tables.qr_token só é gerado pelo servidor: INSERT/UPDATE com token => 42501; rotate_table_qr é o único caminho", async () => {
+    const mine: string[] = [];
+    try {
+      for (const who of ["ownerA", "managerA"] as const) {
+        const forgedToken = `ZZFORJADO${who}`.slice(0, 16);
+        expectDenied(await as(who).from("restaurant_tables").insert({ restaurant_id: A().id, name: `zz-qr-${who}`, qr_token: forgedToken }).select("id"), /42501|permission denied/i);
+        expect(rows(await admin().from("restaurant_tables").select("id").eq("qr_token", forgedToken))).toHaveLength(0);
+      }
+      // cadastro legítimo: o token nasce no servidor, é único e o cliente consegue lê-lo (tables.view)
+      const created = await as("ownerA").from("restaurant_tables").insert({ restaurant_id: A().id, name: `zz-qr-ok-${Date.now()}` }).select("id,qr_token").single();
+      expectOk(created);
+      mine.push(created.data!.id);
+      expect(created.data!.qr_token).toMatch(/^[A-Za-z0-9_-]{8,}$/);
+      const token = created.data!.qr_token as string;
+      // UPDATE do token negado; UPDATE de cadastro mantém o token
+      expectDenied(await as("ownerA").from("restaurant_tables").update({ qr_token: "ZZFORJADOUPDATE" }).eq("id", created.data!.id).select("id"), /42501|permission denied/i);
+      expectDenied(await as("managerA").from("restaurant_tables").update({ qr_token: token }).eq("id", A().tableIds[0]).select("id"), /42501|permission denied/i);
+      expectOk(await as("ownerA").from("restaurant_tables").update({ name: `zz-qr-ren-${Date.now()}`, capacity: 6 }).eq("id", created.data!.id).select("id"));
+      expect((await admin().from("restaurant_tables").select("qr_token").eq("id", created.data!.id).single()).data?.qr_token).toBe(token);
+      // não é oráculo entre tenants: B nunca consegue sondar um token de A por colisão
+      expectDenied(await as("managerB").from("restaurant_tables").insert({ restaurant_id: world().restaurants.b.id, name: "zz-qr-b", qr_token: token }).select("id"), /42501|permission denied/i);
+      // o caminho legítimo
+      const rotated = await as("ownerA").rpc("rotate_table_qr", { p_table: created.data!.id });
+      expectOk(rotated);
+      expect((rotated.data as any).qr_token).not.toBe(token);
+      expect((await admin().from("restaurant_tables").select("qr_token").eq("id", created.data!.id).single()).data?.qr_token).toBe((rotated.data as any).qr_token);
+    } finally {
+      if (mine.length) await admin().from("restaurant_tables").delete().in("id", mine);
+      await admin().from("restaurant_tables").delete().like("name", "zz-qr-%");
+    }
+  });
+});
+
+describe.skipIf(!dockerAvailable)("Fase 4: grants por coluna e EXECUTE das RPCs de comanda/pagamento/mesa (mig. 0117-0123)", () => {
+  const cols = (table: string, priv: "INSERT" | "UPDATE") =>
+    psql(`select column_name from information_schema.column_privileges where grantee='authenticated' and table_schema='public' and table_name='${table}' and privilege_type='${priv}' order by 1`);
+  const tablePriv = (table: string) =>
+    psql(`select string_agg(privilege_type, ',' order by privilege_type) from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name='${table}'`);
+
+  it("tabs: authenticated só atualiza label/guests e não insere nada; restaurant_tables: sem qr_token/status/created_at/updated_at", () => {
+    expect(cols("tabs", "UPDATE")).toEqual(["guests", "label"]);
+    expect(cols("tabs", "INSERT")).toEqual([]);
+    expect(psql("select count(*) from pg_policies where schemaname='public' and tablename='tabs' and cmd='INSERT'")).toEqual(["0"]);
+    expect(cols("restaurant_tables", "INSERT")).toEqual(["area", "capacity", "id", "name", "restaurant_id", "sort_order"]);
+    expect(cols("restaurant_tables", "UPDATE")).toEqual(["area", "capacity", "name", "sort_order"]);
+    // ninguém (nem anon) escreve nessas tabelas por privilégio de tabela inteira
+    expect(psql("select has_table_privilege('anon','public.tabs','insert,update,delete'), has_table_privilege('anon','public.restaurant_tables','insert,update,delete')")).toEqual(["f|f"]);
+    expect((tablePriv("tabs") ?? []).join(",")).not.toMatch(/INSERT/);
+  });
+
+  const RPCS = [
+    "open_tab(uuid,uuid,text,integer)",
+    "create_staff_order(uuid,jsonb,text,text)",
+    "get_tab_balance(uuid)",
+    "record_payment(uuid,uuid,text,integer,integer,text)",
+    "close_tab(uuid,text)",
+    "cancel_tab(uuid,text)",
+    "set_table_status(uuid,text)",
+    "request_tab_print(uuid,text)",
+    "rotate_table_qr(uuid)",
+  ];
+  it("EXECUTE só para authenticated (nunca anon nem PUBLIC) nas 9 RPCs da Fase 4; create_staff_order tem uma única assinatura (a de 4 args)", () => {
+    for (const fn of RPCS) {
+      expect(
+        psql(`select has_function_privilege('anon','public.${fn}','execute'), has_function_privilege('authenticated','public.${fn}','execute'), has_function_privilege('public','public.${fn}','execute')`),
+        fn,
+      ).toEqual(["f|t|f"]);
+    }
+    expect(psql("select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='create_staff_order'")).toEqual(["1"]);
+    // todas SECURITY DEFINER com search_path vazio
+    expect(
+      psql(
+        "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('open_tab','create_staff_order','get_tab_balance','record_payment','close_tab','cancel_tab','set_table_status','request_tab_print','rotate_table_qr') and (not p.prosecdef or p.proconfig is null or not ('search_path=\"\"' = any(p.proconfig)))",
+      ),
+    ).toEqual(["0"]);
+  });
+
+  it("app_private (price_cart_core, price_cart, helpers de comanda) não é executável nem enxergável por anon/authenticated/PUBLIC", async () => {
+    expect(psql("select has_schema_privilege('anon','app_private','usage'), has_schema_privilege('authenticated','app_private','usage')")).toEqual(["f|f"]);
+    const lines = psql(
+      "select p.proname||'|'||has_function_privilege('anon',p.oid,'execute')||'|'||has_function_privilege('authenticated',p.oid,'execute')||'|'||has_function_privilege('public',p.oid,'execute') from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='app_private' and p.proname in ('price_cart_core','price_cart','tab_totals','tab_balance_json','payment_json','require_perm') order by 1",
+    )!;
+    expect(lines.length).toBeGreaterThanOrEqual(6);
+    for (const l of lines) expect(l, l).toMatch(/\|false\|false\|false$|\|f\|f\|f$/);
+    const args = { p_restaurant_id: A().id, p_fulfillment: "DINE_IN", p_items: [], p_delivery_zone_id: null, p_staff: true };
+    expect((await as("managerA").rpc("price_cart_core", args)).error, "price_cart_core acessível pelo cliente").not.toBeNull();
+    expect((await anon().rpc("price_cart_core", args)).error).not.toBeNull();
+  });
 });

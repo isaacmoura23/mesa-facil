@@ -8,6 +8,9 @@ const MESSAGES: Record<string, string> = {
   PRINT_JOB_NOT_FOUND: "O pedido de impressão não foi encontrado.",
   INVALID_PRINT_STATUS: "Estado de impressão inválido.",
   PRINT_INVALID_TRANSITION: "Este pedido de impressão já está em outro estado.",
+  TAB_NOT_FOUND: "Comanda não encontrada ou sem acesso.",
+  TAB_NOT_BILLABLE: "Comanda cancelada: não há conta para imprimir.",
+  TAB_NOT_OPEN: "A conta parcial só vale para comanda aberta. Imprima a conta final.",
 };
 
 export function parsePrintError(error: { message?: string; code?: string } | null | undefined): string {

@@ -13,7 +13,7 @@ function Rule() {
   return <hr className="tp-rule" />;
 }
 
-function ItemLine({ item, receipt }: { item: PrintItem; receipt: boolean }) {
+export function ItemLine({ item, receipt }: { item: PrintItem; receipt: boolean }) {
   return (
     <li className="tp-item">
       <div className="tp-item-main">

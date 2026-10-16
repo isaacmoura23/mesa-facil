@@ -1,4 +1,4 @@
-# Achados de segurança e consistência (Fase 1)
+# Achados de segurança e consistência (Fases 1 a 4)
 
 Origem: suíte `tests/rls` rodando contra o Supabase local real. Os testes dos bugs confirmados usam `it.fails`:
 quando a migração é corrigida, o teste passa a falhar e vira `it`. F-01, F-02, F-05, F-06 e F-07 já foram promovidos a `it` (mig. 111); F-08 foi corrigido na mig. 0116.
@@ -12,12 +12,12 @@ quando a migração é corrigida, o teste passa a falhar e vira `it`. F-01, F-02
 | F-07 | Baixa | limite de 5 restaurantes em `register_restaurant` furado por concorrência | `07` | corrigido (mig. 111) |
 | F-02 | Baixa | `image_path` / `logo_path` sem validação de escopo | `14` | corrigido (mig. 111) |
 | F-08 | Baixa | `print_jobs.payload` definido pelo cliente | `06`, `14`, `20` | corrigido (mig. 0116: INSERT direto removido; payload montado por `request_print`) |
-| F-03 | Info | `qr_token` definível pelo cliente | todo | Fase 4 |
+| F-03 | Info | `qr_token` definível pelo cliente | `14`, `22` | **corrigido (migs. 0117/0121)**: cliente sem INSERT/UPDATE da coluna (42501); `rotate_table_qr` é o único caminho; virou `it` |
 | F-10 | Info | `support` lê `audit_logs` de todos sem sessão | — | corrigido (mig. 111) |
 | F-11 | Info | funções de trigger com EXECUTE para PUBLIC | — | corrigido (mig. 111) |
-| F-12 | Info | dono alterna AVAILABLE/INACTIVE (cadastro de mesa) | — | decisão de produto |
+| F-12 | Info | dono alterna AVAILABLE/INACTIVE (cadastro de mesa) | `04`, `06` | decisão de produto mantida: agora só via `set_table_status` (tables.manage); UPDATE direto de `status` negado a todos |
 | F-13 | Info | tabelas do domínio sem `FORCE ROW LEVEL SECURITY` | — | corrigido (mig. 111) |
-| F-14 | Info | RPCs de negócio ainda inexistentes | `20` | Fase 3: transição de pedido e impressão cobertas via RPC (`20`); faltam as RPCs de comanda/pagamento (Fase 4) |
+| F-14 | Info | RPCs de negócio ainda inexistentes | `20`, `22` | **resolvido**: pedido/impressão (Fase 3, `20`) e comanda/pagamento/mesa/conta (Fase 4, `22`) são RPCs |
 | F-15 | Info | colegas leem `phone`/`avatar_url`; cozinha lê PII do cliente | — | aceito pelo contrato; revisar |
 
 ## Detalhes
@@ -127,3 +127,44 @@ Origem: `tests/rls/20-orders-rpcs` (migs. 0114-0116 via clientes anon/authentica
 - `request_print`/`mark_print_job`: só o solicitante com `print.request` ainda ativo marca; `PRINTED` nunca é definido por cliente; payload do recibo sem telefone/e-mail e endereço só em DELIVERY; auditoria `print.requested` gravada.
 - API de pedidos: origem hostil recebe 403 antes de processar o corpo (nenhum pedido criado); 400/413/422/429 sem texto interno do banco, sem stack traces, sem chaves do Supabase nem ids de restaurante; o acompanhamento não cacheia (`no-store`, `noindex`) e códigos de outro restaurante dão o mesmo 404.
 - Realtime: o INSERT/UPDATE do pedido público chega à caixa e à cozinha de A e a ninguém de B (retry 3).
+
+
+---
+
+# Achados da Fase 4 (mesas, comandas, pagamento manual, conta impressa)
+
+Origem: `tests/rls/22-tab-rpcs` (migs. 0117-0123, só clientes autenticados reais), ajustes em `04`/`06`/`07`/`14` e unitários (`tab-billing`, `tables-staff`, `bill-and-tables-admin`). **Nenhuma falha de isolamento entre restaurantes, escalonamento de privilégio, dinheiro registrado a mais/menos, deadlock ou comanda fechada com pedido em andamento foi encontrada nas migrações 0117-0123.**
+
+**Brecha fechada pelas migrações:** até a 0120 um cliente com `tabs.manage` ainda conseguia `UPDATE tabs SET status='CLOSED'` (contornando `TAB_UNPAID`, `TAB_HAS_OPEN_ORDERS` e a auditoria), `UPDATE restaurant_tables SET status=...` (contornando `set_table_status`) e `INSERT` direto em `tabs`. A 0121 reduziu o UPDATE de `tabs` a `label`/`guests` e o de `restaurant_tables` a `name/area/capacity/sort_order`; a 0122 removeu o INSERT direto em `tabs` (policy + GRANT). Os testes `04`/`06`/`07`/`14`/`22` passaram a exigir exatamente isso (42501 em todas as variações; parâmetros forjados em `open_tab` => PGRST202).
+
+| # | Sev. | Tema | Onde | Teste |
+|---|---|---|---|---|
+| F-35 | Baixa | `set_table_status` devolve `{unchanged:true, table:{id,name,status}}` ANTES de checar a permissão: um membro sem `tables.view` (cozinha) lê nome e estado de qualquer mesa do próprio restaurante pedindo o estado em que ela já está | mig. 0120 | `22` `it.fails` |
+| F-36 | Info | `create_staff_order` com a mesma `p_idempotency_key` e ITENS diferentes devolve o pedido original com `idempotent_replay:true` (sem `IDEMPOTENCY_CONFLICT`, ao contrário de `record_payment`): um bug de cliente que reutilize a chave perde o pedido novo em silêncio. Mesma família do F-31 | mig. 0123 | `22` (documentado, passa) |
+| F-37 | Baixa | `parseMoneyToCents` com vírgula descarta TODOS os pontos sem validar o agrupamento de milhar: `"1.2,50"` => R$ 12,50 e `"12.50,3"` => R$ 1.250,30 (mesma classe do F-18). O servidor limita ao saldo (`OVERPAYMENT`), então o dano é valor errado dentro do saldo | `src/modules/tab-billing/money.ts` | `unit/tab-billing` `it.fails` |
+| F-38 | Info | Códigos que o banco levanta e a UI não traduz (caem em "verifique a conexão"): `ORDER_NOT_FOUND`, `RESTAURANT_UNAVAILABLE` (cobrança) e `RESTAURANT_UNAVAILABLE`, `LABEL_REQUIRED`, `INVALID_LABEL`, `INVALID_GUESTS`, `INVALID_NOTES`, `INVALID_IDEMPOTENCY_KEY` (mesas). `tables/errors.ts` mapeia `RESTAURANT_INACTIVE`, que o banco nunca emite | `tab-billing/errors.ts`, `tables/errors.ts` | `unit/tab-billing`, `unit/tables-staff` `it.fails` |
+| F-39 | Info | `paymentMethodLabel("constructor"/"toString"/"__proto__")` do painel do dono devolve uma FUNÇÃO (`PAYMENT_METHOD_LABELS[m] ?? "Outro"` herda de `Object.prototype`; mesma classe do F-19). Latente: o método vem do enum do banco | `src/modules/tables-admin/format.ts` | `unit/bill-and-tables-admin` `it.fails` |
+| F-40 | Baixa | `parseTabFilters` aceita datas impossíveis (`2026-02-30`, `04-31`): `Date` as rola para o mês seguinte, o filtro passa e o Postgres recusa `2026-02-30T00:00:00-03:00` (22008); a lista de comandas mostra o erro de carregamento em vez de ignorar o parâmetro | `src/modules/tables-admin/schemas.ts` | `unit/bill-and-tables-admin` `it.fails` |
+| F-41 | Info | `recordPaymentResultSchema` lê `change_cents`/`remaining_cents` no TOPO da resposta, mas o banco os devolve em `payment.change_cents` e `balance.remaining_cents`; a UI cai no cálculo local do troco (mesmo valor). Sem erro, só contrato desalinhado | `tab-billing/types.ts` | `22` (documentado, passa) |
+
+## Detalhes e correções sugeridas
+
+- **F-35** Repro (cozinha de A, mesa AVAILABLE): `rpc('set_table_status', {p_table: <id>, p_to: 'AVAILABLE'})` => `{"ok":true,"unchanged":true,"table":{"id":...,"name":"...","status":"AVAILABLE"}}`. Correção: checar `tables.operate` OU `tables.manage` logo após validar `p_to`, antes do ramo `unchanged`. Não cruza tenants (`is_member` vale antes).
+- **F-36** Correção: guardar um hash canônico dos itens/observações junto da chave (como proposto no F-31) e devolver `IDEMPOTENCY_CONFLICT` quando divergir, ou documentar que a chave identifica a TENTATIVA (o app usa `newAttemptKey()` por tentativa, então o uso correto não é afetado).
+- **F-37** Correção: com vírgula, só remover pontos se a parte antes da vírgula casar `^\d{1,3}(\.\d{3})+$`; senão `null`. Aceita `1.234,50`, rejeita `1.2,50`.
+- **F-38** Acrescentar as mensagens em PT-BR a `MESSAGES` e trocar `RESTAURANT_INACTIVE` por `RESTAURANT_UNAVAILABLE`.
+- **F-39** Usar `Object.hasOwn(PAYMENT_METHOD_LABELS, method)`.
+- **F-40** Validar o calendário: `new Date(v + "T00:00:00Z").toISOString().startsWith(v)` além de `!isNaN`.
+- **F-41** Ler `payment.change_cents`/`balance.remaining_cents` (ou continuar calculando localmente e tirar os campos do schema).
+
+## Resultados positivos (Fase 4) — atacado e **não** furou
+
+- **Papéis**: o dono lê comandas/mesas/pedidos/pagamentos/saldo e é `FORBIDDEN` em `open_tab`, `create_staff_order`, `record_payment`, `close_tab`, `cancel_tab`, `set_table_status` (transições operacionais) e `request_tab_print`, sem alterar nada; cozinha negada em tudo (`rotate_table_qr` incluído); garçom abre/lança/pede a conta mas não registra pagamento e não fecha com saldo (nem com justificativa); caixa e gerente pagam/fecham; só `tables.manage` (dono/gerente) rotaciona QR e desativa mesa.
+- **Tenants**: funcionários de B recebem `RESTAURANT_NOT_FOUND`/`TAB_NOT_FOUND`/`ORDER_NOT_FOUND`/`TABLE_NOT_FOUND` em todas as RPCs sobre ids de A; a mensagem de um id de A, de um id inexistente e de quem não tem vínculo é idêntica (sem oráculo); produto de B no carrinho é indistinguível de inexistente (mesmo código e mensagem); a referência de pagamento é por restaurante; anon não tem EXECUTE em nenhuma das 9 RPCs.
+- **Dinheiro**: o valor nunca passa do saldo (`OVERPAYMENT` com `remaining_cents` no detalhe; 6 pagamentos de R$ 10 numa conta de R$ 30 => exatamente 3); `consumido` exclui cancelados/recusados; `overpaid_cents` aparece quando o pedido é cancelado depois do pagamento e `cancel_tab` recusa (`TAB_HAS_PAYMENTS`); troco só em CASH e calculado no servidor; pagamento sempre PAID/MANUAL/`recorded_by = chamador` (parâmetros extras => PGRST202); a mesma referência em 6 chamadas paralelas gera 1 pagamento e 1 auditoria; divergência de valor/forma/alvo => `IDEMPOTENCY_CONFLICT`; o replay continua válido com a comanda já fechada.
+- **Fechamento**: `unpaid_cents`/`unpaid_reason` só nascem em `close_tab` (justificativa 10..500 e `payments.record`), auditoria `tab.closed_unpaid` com consumo/pago/saldo/justificativa, justificativa descartada quando não há saldo, repetição `unchanged:true` sem nova auditoria nem re-sujar a mesa, 4 fechamentos paralelos => 1.
+- **Concorrência (clientes autenticados, 4-6 rodadas por cenário, ambos os sentidos)**: pagamento x fechamento (com e sem justificativa, por comanda e por pedido), pedido novo x fechamento, pedido novo x `cancel_tab`, 6 aberturas na mesma mesa, 10 pedidos simultâneos (números únicos): nenhum `40P01`/serialização; invariantes `unpaid_cents = consumo - pago` e nenhuma comanda CLOSED/CANCELLED com pedido ativo.
+- **price_cart (mig. 0118)**: modo equipe ignora fechado/pausado/mínimo (R$ 10 com mínimo de R$ 1.000 e restaurante fechado e pausado) e mantém `VARIANT_REQUIRED`, `VARIANT_*`, `MODIFIER_GROUP_MIN/MAX`, `MODIFIER_NOT_ALLOWED`, `PRODUCT_UNAVAILABLE`, `INVALID_QUANTITY`, `EMPTY_CART`, `FULFILLMENT_DISABLED`; preço/total/delta forjados no JSON são ignorados; `validate_cart` e `create_public_order` continuam recusando `RESTAURANT_CLOSED` com o mesmo restaurante (regressão); `app_private.price_cart_core` não é executável nem visível por clientes.
+- **Conta impressa**: payload montado no servidor sem telefone, e-mail, nome de cliente, endereço, ids de usuário nem justificativa interna (mesmo com um pedido da comanda cheio de dados de cliente), itens consolidados, pagamentos com troco, saldo, `total_cents`/`unpaid_cents` só em comanda CLOSED, PARTIAL só em OPEN, CANCELLED => `TAB_NOT_BILLABLE`, `mark_print_job` só pelo solicitante e nunca PRINTED; a resposta real passa nos schemas do app (`requestTabPrintResultSchema`, `tabBalanceSchema`).
+- **QR**: `rotate_table_qr` gera token de 16+ caracteres no servidor, sempre novo, e o token (antigo ou novo) nunca aparece em `audit_logs`; cliente nenhum grava `qr_token` (insert nem update; B não consegue sondar colisão com token de A).
+- **Realtime**: `tabs`, `restaurant_tables` e `payments` de A chegam ao caixa e ao garçom de A e nunca a B (e vice-versa); o garçom recebe comandas e mesas mas nenhum `payments` (RLS `payments_select`).

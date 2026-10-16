@@ -24,7 +24,7 @@ const modifierSchema = z.object({
   price_delta_cents: z.number().int().default(0),
 });
 
-const itemSchema = z.object({
+export const printItemSchema = z.object({
   name: z.string(),
   variant_name: z.string().nullish(),
   quantity: z.number().int(),
@@ -57,7 +57,7 @@ export const printPayloadSchema = z.object({
   table_label: z.string().nullish(),
   tab_label: z.string().nullish(),
   notes: z.string().nullish(),
-  items: z.array(itemSchema).default([]),
+  items: z.array(printItemSchema).default([]),
   // KITCHEN_TICKET
   customer_first_name: z.string().nullish(),
   // ORDER_RECEIPT

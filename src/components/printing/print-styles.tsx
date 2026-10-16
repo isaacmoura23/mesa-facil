@@ -41,6 +41,9 @@ function css(width: PaperWidth): string {
 .tp-total { font-size: 1.3em; font-weight: 800; margin-top: 2px; }
 .tp-pay { margin-top: 4px; font-weight: 700; }
 .tp-foot { font-size: 0.9em; }
+.tp-banner { margin-top: 4px; border: 2px solid #000; padding: 2px 4px; font-weight: 800; text-align: center; }
+.tp-pays > div { display: flex; justify-content: space-between; gap: 6px; }
+.tp-balance { font-size: 1.3em; font-weight: 800; margin-top: 2px; display: flex; justify-content: space-between; gap: 6px; }
 @media print {
   html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; height: auto !important; overflow: visible !important; }
   body > *:not(#tp-host) { display: none !important; }

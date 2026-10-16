@@ -95,9 +95,14 @@ async function cleanupLeftovers(admin: Admin): Promise<void> {
   must(await admin.from("restaurants").delete().like("slug", `${EPHEMERAL_PREFIX}%`), "cleanup restaurants");
 
   const demoIds = Object.values(DEMO_RESTAURANTS).map((r) => r.id);
+  // Fase 4: pagamentos manuais (record_payment grava a chave como "MANUAL:<referência>"), pedidos de salão lançados
+  // por create_staff_order (chave "STAFF:<comanda>:<chave>" ou nula), comandas e mesas criadas por testes/UI.
   must(await admin.from("payments").delete().in("restaurant_id", demoIds).like("idempotency_key", `${EPHEMERAL_PREFIX}%`), "cleanup payments");
+  must(await admin.from("payments").delete().in("restaurant_id", demoIds).like("idempotency_key", `MANUAL:${EPHEMERAL_PREFIX}%`), "cleanup manual payments");
+  must(await admin.from("payments").delete().in("restaurant_id", demoIds).like("idempotency_key", "MANUAL:ui-%"), "cleanup ui payments");
   must(await admin.from("print_jobs").delete().in("restaurant_id", demoIds).like("printer_target", `${EPHEMERAL_PREFIX}%`), "cleanup print_jobs");
   must(await admin.from("orders").delete().in("restaurant_id", demoIds).like("idempotency_key", `${EPHEMERAL_PREFIX}%`), "cleanup orders");
+  must(await admin.from("orders").delete().in("restaurant_id", demoIds).like("table_label", `${EPHEMERAL_PREFIX}%`), "cleanup staff orders (ui)");
   must(await admin.from("tabs").delete().in("restaurant_id", demoIds).like("label", `${EPHEMERAL_PREFIX}%`), "cleanup tabs");
   must(await admin.from("restaurant_tables").delete().in("restaurant_id", demoIds).like("name", `${EPHEMERAL_PREFIX}%`), "cleanup tables");
   must(await admin.from("products").delete().in("restaurant_id", demoIds).like("name", `${EPHEMERAL_PREFIX}%`), "cleanup products");
@@ -264,12 +269,27 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
   const zoneOff = await ensureOne(admin, "delivery_zones", { restaurant_id: rid, name: "DEMO Zona Inativa" }, { fee_cents: 900, min_order_cents: 0, estimated_minutes: null, neighborhoods: [], postal_code_prefixes: [], is_active: false }, E);
   await pruneExcept(admin, "delivery_zones", rid, [zone.id, zoneOff.id]);
 
-  // Mesas
+  // Fase 4: tudo que é operacional (pagamentos, impressões, pedidos, comandas e mesas) volta ao estado base do seed.
+  // Ordem por causa das FKs: payments (sem cascade) -> print_jobs -> pedidos fora do seed -> comandas fora do seed.
+  const keepOrderPrefix = `demo-seed-order-${k}-`;
+  must(await admin.from("payments").delete().eq("restaurant_id", rid).neq("idempotency_key", `demo-seed-pay-${k}-1`), "prune payments");
+  must(await admin.from("payments").delete().eq("restaurant_id", rid).is("idempotency_key", null), "prune payments (sem chave)");
+  must(await admin.from("print_jobs").delete().eq("restaurant_id", rid), "prune print_jobs");
+  const allOrders = must(await admin.from("orders").select("id,idempotency_key").eq("restaurant_id", rid), "list orders") as Row[];
+  const strayOrders = allOrders.filter((o) => !String(o.idempotency_key ?? "").startsWith(keepOrderPrefix)).map((o) => o.id as string);
+  if (strayOrders.length) must(await admin.from("orders").delete().in("id", strayOrders), "prune orders");
+  const seedTabLabel = `DEMO Comanda ${suffix}`;
+  must(await admin.from("tabs").delete().eq("restaurant_id", rid).neq("label", seedTabLabel), "prune tabs");
+  must(await admin.from("tabs").delete().eq("restaurant_id", rid).is("label", null), "prune tabs (sem rótulo)");
+
+  // Mesas: só as 6 do seed; estado base AVAILABLE (a Mesa 1 vira OCCUPIED pela comanda aberta abaixo).
+  // qr_token nunca é tocado (gerado por default no banco; rotate_table_qr é o único caminho de troca).
   const tableIds: string[] = [];
   for (let i = 1; i <= 6; i++) {
-    const t = await ensureOne(admin, "restaurant_tables", { restaurant_id: rid, name: `DEMO Mesa ${i}` }, { capacity: 4, area: "Salão", sort_order: i });
+    const t = await ensureOne(admin, "restaurant_tables", { restaurant_id: rid, name: `DEMO Mesa ${i}` }, { capacity: 4, area: "Salão", sort_order: i }, E);
     tableIds.push(t.id);
   }
+  await pruneExcept(admin, "restaurant_tables", rid, tableIds);
 
   // Cliente + endereço
   const phone = k === "a" ? "11999990001" : "11999990002";
@@ -278,7 +298,25 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
 
   // Comanda aberta na Mesa 1 (a mesa passa a OCCUPIED via trigger)
   const tabTableId = tableIds[0];
-  const tab = await ensureOne(admin, "tabs", { restaurant_id: rid, label: `DEMO Comanda ${suffix}` }, { table_id: tabTableId, guests: 2, opened_by: cashier, status: "OPEN" });
+  let tab = await ensureOne(admin, "tabs", { restaurant_id: rid, label: seedTabLabel }, { table_id: tabTableId, guests: 2, opened_by: cashier, status: "OPEN" });
+  if (tab.status !== "OPEN" || tab.table_id !== tabTableId || tab.guests !== 2 || tab.unpaid_cents !== 0) {
+    // Fechada/cancelada por teste ou UI: reabre (service role não passa pelos grants de coluna); se o banco recusar, recria.
+    const reopen = await admin
+      .from("tabs")
+      .update({ status: "OPEN", status_reason: null, table_id: tabTableId, guests: 2, closed_at: null, closed_by: null, total_cents: 0, unpaid_cents: 0, unpaid_reason: null })
+      .eq("id", tab.id)
+      .select("*")
+      .single();
+    if (reopen.error) {
+      must(await admin.from("tabs").delete().eq("id", tab.id), "drop stale seed tab");
+      tab = must(await admin.from("tabs").insert({ restaurant_id: rid, label: seedTabLabel, table_id: tabTableId, guests: 2, opened_by: cashier }).select("*").single(), "recreate seed tab");
+    } else {
+      tab = reopen.data;
+    }
+  }
+  // Mesas: AVAILABLE exceto a da comanda aberta do seed (a UI/os testes deixam mesas OCCUPIED/CLEANING/INACTIVE).
+  must(await admin.from("restaurant_tables").update({ status: "AVAILABLE" }).eq("restaurant_id", rid).neq("id", tabTableId).neq("status", "AVAILABLE"), "reset table status");
+  must(await admin.from("restaurant_tables").update({ status: "OCCUPIED" }).eq("id", tabTableId).neq("status", "OCCUPIED"), "occupy seed table");
 
   // Pedidos (chave de idempotência estável => não duplica)
   const orderSpecs = [
@@ -331,6 +369,9 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
     orderIds.push(order.id);
     if (spec.n === 4) completedTotal = order.total_cents;
   }
+
+  // O pedido de salão do seed continua preso à comanda aberta do seed (FK é SET NULL se a comanda foi recriada).
+  must(await admin.from("orders").update({ tab_id: tab.id, table_id: tabTableId }).eq("id", orderIds[2]).or(`tab_id.is.null,tab_id.neq.${tab.id}`), "relink seed dine-in order");
 
   // Pagamento do pedido concluído
   const payKey = `demo-seed-pay-${k}-1`;

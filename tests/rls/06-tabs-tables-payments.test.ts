@@ -6,7 +6,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 import type { AccountKey } from "../fixtures/accounts";
-import { admin, as, world } from "../helpers/clients";
+import { admin, anon, as, world } from "../helpers/clients";
 import { expectDenied, expectNoRows, expectNotApplied, expectOk, expectRule, rows } from "../helpers/expect";
 import { Cleanup, makeOrder, makePayment, makeTable, tabRow, tableRow, uniq } from "../helpers/factory";
 
@@ -18,147 +18,179 @@ afterAll(async () => {
   await cleanup.run();
 });
 
-const openTab = (who: AccountKey, tableId: string | null, extra: Record<string, unknown> = {}) =>
+/** Abre comanda pela ÚNICA porta de entrada (mig. 0122): RPC open_tab. */
+const openTab = (who: AccountKey, tableId: string | null, extra: { label?: string | null; guests?: number | null; restaurant?: string } = {}) =>
+  as(who).rpc("open_tab", {
+    p_restaurant: extra.restaurant ?? A().id,
+    p_table_id: tableId,
+    p_label: extra.label === undefined ? `zz-${uniq()}` : extra.label,
+    p_guests: extra.guests ?? null,
+  });
+
+/** INSERT direto em tabs (negado desde a 0122) — usado nos ataques. */
+const directInsertTab = (who: AccountKey, tableId: string | null, extra: Record<string, unknown> = {}) =>
   as(who)
     .from("tabs")
     .insert({ restaurant_id: A().id, table_id: tableId, status: "OPEN", total_cents: 0, opened_by: world().users[who].id, label: `zz-${uniq()}`, ...extra })
     .select("*")
     .single();
 
-async function openedTab(who: AccountKey, tableId: string | null, extra: Record<string, unknown> = {}) {
+async function openedTab(who: AccountKey, tableId: string | null, extra: { label?: string | null; guests?: number | null } = {}) {
   const res = await openTab(who, tableId, extra);
   expectOk(res);
-  const id = res.data!.id as string;
+  const tab = (res.data as any).tab;
   cleanup.add(async () => {
-    await admin().from("payments").delete().eq("tab_id", id);
-    await admin().from("tabs").delete().eq("id", id);
+    await admin().from("payments").delete().eq("tab_id", tab.id);
+    await admin().from("print_jobs").delete().eq("tab_id", tab.id);
+    await admin().from("tabs").delete().eq("id", tab.id);
   });
-  return res.data!;
+  return tab as { id: string; status: string; opened_by: string; table_id: string | null; label: string | null };
 }
 
-describe("abertura de comanda", () => {
+const pay = (who: AccountKey, tabId: string, cents: number, extra: Record<string, unknown> = {}) =>
+  as(who).rpc("record_payment", { p_tab: tabId, p_method: "CASH", p_amount_cents: cents, ...extra });
+
+describe("abertura de comanda (open_tab é a única entrada; INSERT direto negado: mig. 0122)", () => {
   for (const who of ["cashierA", "waiterA", "managerA"] as const) {
     it(`${who} (tabs.manage) abre comanda; a mesa passa a OCCUPIED; autoria = o próprio usuário`, async () => {
       const table = await makeTable(cleanup, A().id);
       const tab = await openedTab(who, table.id);
       expect(tab.status).toBe("OPEN");
       expect(tab.opened_by).toBe(world().users[who].id);
-      expect(tab.single_per_table).toBe(true);
+      expect((await tabRow(tab.id)).single_per_table).toBe(true);
       expect((await tableRow(table.id)).status).toBe("OCCUPIED");
       const hist = await admin().from("tab_status_history").select("from_status,to_status,changed_by").eq("tab_id", tab.id);
       expect(hist.data).toEqual([{ from_status: null, to_status: "OPEN", changed_by: world().users[who].id }]);
     });
   }
 
-  it("cozinha (sem tabs.manage) e dono não abrem comanda; usuário sem vínculo também não", async () => {
+  it("cozinha e dono recebem FORBIDDEN; sem vínculo e superadmin (sem sessão de suporte) não enxergam o restaurante", async () => {
     const table = await makeTable(cleanup, A().id);
-    for (const who of ["kitchenA", "ownerA", "plain", "superadmin"] as const) {
-      expectDenied(await openTab(who, table.id));
-    }
+    for (const who of ["kitchenA", "ownerA"] as const) expectRule(await openTab(who, table.id), /FORBIDDEN/);
+    for (const who of ["plain", "superadmin"] as const) expectRule(await openTab(who, table.id), /RESTAURANT_NOT_FOUND/);
     expect(rows(await admin().from("tabs").select("id").eq("table_id", table.id))).toHaveLength(0);
     expect((await tableRow(table.id)).status).toBe("AVAILABLE");
   });
 
-  it("não é possível forjar autoria, estado, total ou desligar 'uma comanda por mesa'", async () => {
+  it("anônimo não executa open_tab (EXECUTE só authenticated)", async () => {
     const table = await makeTable(cleanup, A().id);
-    expectDenied(await openTab("cashierA", table.id, { total_cents: 5000 }));
-    expectDenied(await openTab("cashierA", table.id, { status: "CLOSED", closed_at: new Date().toISOString() }));
-    expectDenied(await openTab("cashierA", table.id, { closed_at: new Date().toISOString() }));
+    expectDenied(await anon().rpc("open_tab", { p_restaurant: A().id, p_table_id: table.id, p_label: "zz-anon" }));
+    expect(rows(await admin().from("tabs").select("id").eq("table_id", table.id))).toHaveLength(0);
+  });
+
+  it("não é possível forjar autoria, estado, total ou 'uma comanda por mesa': a RPC não aceita esses parâmetros e o INSERT direto é negado", async () => {
+    const table = await makeTable(cleanup, A().id);
+    // parâmetros que não existem na assinatura => PostgREST nem encontra a função
+    const forged = await as("cashierA").rpc("open_tab", { p_restaurant: A().id, p_table_id: table.id, p_label: "zz-forja", p_total_cents: 5000, p_status: "CLOSED", p_opened_by: world().users.managerA.id });
+    expect(forged.error, "a RPC aceitou parâmetros de estado forjados").not.toBeNull();
+    expect(forged.error!.code).toBe("PGRST202");
+    // INSERT direto negado em qualquer variação
+    for (const extra of [{ total_cents: 5000 }, { status: "CLOSED", closed_at: new Date().toISOString() }, { closed_at: new Date().toISOString() }, { single_per_table: false }, {}]) {
+      expectDenied(await directInsertTab("cashierA", table.id, extra), /42501|permission denied/i);
+    }
     expect(rows(await admin().from("tabs").select("id").eq("table_id", table.id))).toHaveLength(0);
 
-    // opened_by forjado é sobrescrito pelo trigger com o auth.uid() (autoria é do servidor)
-    const other = await makeTable(cleanup, A().id);
-    const impersonated = await openedTab("cashierA", other.id, { opened_by: world().users.managerA.id });
-    expect(impersonated.opened_by).toBe(world().users.cashierA.id);
-
-    // single_per_table:false é ignorado (o trigger copia da configuração do restaurante)
-    const first = await openedTab("cashierA", table.id, { single_per_table: false });
-    expect(first.single_per_table).toBe(true);
-    const second = await openTab("waiterA", table.id, { single_per_table: false });
-    expect(second.error?.code).toBe("23505");
+    // autoria, estado e single_per_table vêm do servidor
+    const tab = await openedTab("cashierA", table.id);
+    const row = await tabRow(tab.id);
+    expect(row).toMatchObject({ opened_by: world().users.cashierA.id, status: "OPEN", total_cents: 0, closed_at: null, closed_by: null, single_per_table: true, unpaid_cents: 0 });
+    expectRule(await openTab("waiterA", table.id), /TABLE_HAS_OPEN_TAB/);
   });
 
-  // CORRIGIDO (mig. 111, F-01): antes, o INSERT em tabs concedia todas as colunas ao cliente e o
-  // trigger só sobrescrevia opened_by/single_per_table. Agora opened_at/created_at/closed_by/status_reason também.
-  it("[F-01] opened_at/created_at/closed_by/status_reason forjados no INSERT são sobrescritos ou rejeitados", async () => {
+  // F-01 (corrigido na 111 e agora estruturalmente: o INSERT direto não existe mais).
+  it("[F-01] opened_at/created_at/closed_by/status_reason forjados: INSERT direto negado; a comanda aberta pela RPC tem marcos do servidor", async () => {
     const table = await makeTable(cleanup, A().id);
     const forged = "2001-01-01T00:00:00Z";
-    const res = await openTab("cashierA", table.id, { opened_at: forged, created_at: forged, closed_by: world().users.ownerA.id, status_reason: "forjado" });
-    if (res.error) {
-      expectDenied(res);
-      return;
-    }
-    cleanup.add(async () => void (await admin().from("tabs").delete().eq("id", res.data!.id)));
-    const row = await tabRow(res.data!.id);
-    expect(new Date(row.opened_at).getFullYear(), "opened_at forjado pelo cliente").toBeGreaterThan(2020);
-    expect(new Date(row.created_at).getFullYear(), "created_at forjado pelo cliente").toBeGreaterThan(2020);
-    expect(row.closed_by, "closed_by forjado pelo cliente").toBeNull();
-    expect(row.status_reason, "status_reason forjado pelo cliente").toBeNull();
+    expectDenied(await directInsertTab("cashierA", table.id, { opened_at: forged, created_at: forged, closed_by: world().users.ownerA.id, status_reason: "forjado" }), /42501|permission denied/i);
+    expect(rows(await admin().from("tabs").select("id").eq("table_id", table.id))).toHaveLength(0);
+    const tab = await openedTab("cashierA", table.id);
+    const row = await tabRow(tab.id);
+    expect(new Date(row.opened_at).getFullYear()).toBeGreaterThan(2020);
+    expect(new Date(row.created_at).getFullYear()).toBeGreaterThan(2020);
+    expect(row.closed_by).toBeNull();
+    expect(row.status_reason).toBeNull();
   });
 
-  it("mesa inativa não aceita comanda; mesa de outro restaurante não pode ser usada (FK composta)", async () => {
+  it("mesa inativa => TABLE_INACTIVE; restaurante de outro tenant => RESTAURANT_NOT_FOUND; mesa de B sob restaurante A => TABLE_NOT_FOUND", async () => {
     const inactive = await makeTable(cleanup, A().id, { status: "INACTIVE" });
     expectRule(await openTab("cashierA", inactive.id), /TABLE_INACTIVE/);
-    const res = await openTab("cashierA", B().tableIds[3]);
-    expect(res.error?.code).toBe("23503");
+    expectRule(await openTab("cashierA", B().tableIds[3], { restaurant: B().id }), /RESTAURANT_NOT_FOUND/);
+    expectRule(await openTab("cashierA", B().tableIds[3]), /TABLE_NOT_FOUND/);
+    expect(rows(await admin().from("tabs").select("id").in("table_id", [inactive.id, B().tableIds[3]]).like("label", "zz-%"))).toHaveLength(0);
   });
 
-  it("comanda avulsa (sem mesa) pode ter várias abertas", async () => {
+  it("comanda avulsa (sem mesa) exige identificação e pode ter várias abertas", async () => {
+    expectRule(await openTab("cashierA", null, { label: null }), /LABEL_REQUIRED/);
+    expectRule(await openTab("cashierA", null, { label: "   " }), /LABEL_REQUIRED/);
     const t1 = await openedTab("cashierA", null);
     const t2 = await openedTab("cashierA", null);
     expect(t1.id).not.toBe(t2.id);
   });
 });
 
-describe("fechamento e cancelamento de comanda", () => {
-  it("fechar calcula o total no servidor (ignora pedidos cancelados/recusados), marca autor e libera a mesa para limpeza", async () => {
+describe("fechamento e cancelamento de comanda (close_tab / cancel_tab; UPDATE direto de status negado: mig. 0121)", () => {
+  it("fechar calcula o total no servidor (ignora pedidos cancelados/recusados), marca autor e leva a mesa para limpeza", async () => {
     const table = await makeTable(cleanup, A().id);
     const tab = await openedTab("waiterA", table.id);
-    await makeOrder(cleanup, A().id, { tabId: tab.id, tableId: table.id, fulfillment: "DINE_IN", totalCents: 3000 });
-    await makeOrder(cleanup, A().id, { tabId: tab.id, tableId: table.id, fulfillment: "DINE_IN", totalCents: 2000 });
+    await makeOrder(cleanup, A().id, { tabId: tab.id, tableId: table.id, fulfillment: "DINE_IN", totalCents: 3000, status: "COMPLETED" });
+    await makeOrder(cleanup, A().id, { tabId: tab.id, tableId: table.id, fulfillment: "DINE_IN", totalCents: 2000, status: "COMPLETED" });
     await makeOrder(cleanup, A().id, { tabId: tab.id, tableId: table.id, fulfillment: "DINE_IN", totalCents: 9999, status: "CANCELLED" });
 
-    // total vindo do cliente é barrado por GRANT (coluna não atualizável)
+    // UPDATE direto de status/total é barrado por GRANT de coluna
     expectDenied(await as("cashierA").from("tabs").update({ status: "CLOSED", total_cents: 1 }).eq("id", tab.id).select("id"), /42501|permission denied/);
+    expectDenied(await as("cashierA").from("tabs").update({ status: "CLOSED" }).eq("id", tab.id).select("id"), /42501|permission denied/);
     expect((await tabRow(tab.id)).status).toBe("OPEN");
 
-    expectOk(await as("cashierA").from("tabs").update({ status: "CLOSED" }).eq("id", tab.id).select("id"));
+    expectRule(await as("cashierA").rpc("close_tab", { p_tab: tab.id }), /TAB_UNPAID/);
+    expectOk(await pay("cashierA", tab.id, 5000));
+    const res = await as("cashierA").rpc("close_tab", { p_tab: tab.id });
+    expectOk(res);
+    expect(res.data).toMatchObject({ ok: true, unchanged: false, unpaid_cents: 0 });
     const closed = await tabRow(tab.id);
-    expect(closed).toMatchObject({ status: "CLOSED", total_cents: 5000, closed_by: world().users.cashierA.id });
+    expect(closed).toMatchObject({ status: "CLOSED", total_cents: 5000, closed_by: world().users.cashierA.id, unpaid_cents: 0, unpaid_reason: null });
     expect(closed.closed_at).not.toBeNull();
     expect((await tableRow(table.id)).status).toBe("CLEANING");
   });
 
   it("comanda encerrada é imutável (não reabre, não troca status, não edita rótulo)", async () => {
     const tab = await openedTab("cashierA", null);
-    expectOk(await as("cashierA").from("tabs").update({ status: "CLOSED" }).eq("id", tab.id).select("id"));
+    expectOk(await as("cashierA").rpc("close_tab", { p_tab: tab.id }));
     const frozen = await tabRow(tab.id);
-    for (const patch of [{ status: "OPEN" }, { status: "CANCELLED", status_reason: "x" }, { label: "zz-novo" }, { guests: 3 }]) {
+    for (const patch of [{ status: "OPEN" }, { status: "CANCELLED", status_reason: "x" }]) {
+      expectDenied(await as("managerA").from("tabs").update(patch).eq("id", tab.id).select("id"), /42501|permission denied/);
+    }
+    for (const patch of [{ label: "zz-novo" }, { guests: 3 }]) {
       expectRule(await as("managerA").from("tabs").update(patch).eq("id", tab.id).select("id"), /TAB_INVALID_TRANSITION/);
     }
+    expectRule(await as("managerA").rpc("cancel_tab", { p_tab: tab.id, p_reason: "tarde demais" }), /TAB_NOT_OPEN/);
     expect(await tabRow(tab.id)).toEqual(frozen);
   });
 
-  it("cancelar exige motivo; com motivo funciona e libera a mesa", async () => {
+  it("cancelar exige motivo; com motivo (cancel_tab) funciona e a mesa volta direto a AVAILABLE (sem consumo, nada a limpar)", async () => {
     const table = await makeTable(cleanup, A().id);
     const tab = await openedTab("cashierA", table.id);
-    for (const patch of [{ status: "CANCELLED" }, { status: "CANCELLED", status_reason: "  " }]) {
-      expectRule(await as("cashierA").from("tabs").update(patch).eq("id", tab.id).select("id"), /REASON_REQUIRED|tabs_cancel_reason_required|violates check/);
-    }
+    for (const reason of ["", "  ", null]) expectRule(await as("cashierA").rpc("cancel_tab", { p_tab: tab.id, p_reason: reason }), /REASON_REQUIRED/);
+    expectDenied(await as("cashierA").from("tabs").update({ status: "CANCELLED", status_reason: "cliente saiu" }).eq("id", tab.id).select("id"), /42501|permission denied/);
     expect((await tabRow(tab.id)).status).toBe("OPEN");
-    expectOk(await as("cashierA").from("tabs").update({ status: "CANCELLED", status_reason: "cliente saiu" }).eq("id", tab.id).select("id"));
+    const res = await as("cashierA").rpc("cancel_tab", { p_tab: tab.id, p_reason: "cliente saiu" });
+    expectOk(res);
+    expect(res.data).toMatchObject({ ok: true, unchanged: false, status: "CANCELLED", table_status: "AVAILABLE" });
     expect(await tabRow(tab.id)).toMatchObject({ status: "CANCELLED", status_reason: "cliente saiu" });
-    expect((await tableRow(table.id)).status).toBe("CLEANING");
+    expect((await tableRow(table.id)).status).toBe("AVAILABLE");
   });
 
-  it("colunas calculadas pelo servidor não são editáveis (mesa, total, marcos, autoria)", async () => {
+  it("colunas calculadas pelo servidor não são editáveis (status, mesa, total, marcos, autoria)", async () => {
     const table = await makeTable(cleanup, A().id);
     const other = await makeTable(cleanup, A().id);
     const tab = await openedTab("cashierA", table.id);
     const before = await tabRow(tab.id);
     for (const patch of [
+      { status: "CLOSED" },
+      { status_reason: "x" },
       { table_id: other.id },
       { total_cents: 100 },
+      { unpaid_cents: 100 },
+      { unpaid_reason: "forjada pelo cliente" },
       { closed_at: new Date().toISOString() },
       { opened_by: world().users.ownerA.id },
       { closed_by: world().users.ownerA.id },
@@ -175,7 +207,7 @@ describe("fechamento e cancelamento de comanda", () => {
 
   it("pedido não pode ser lançado em comanda encerrada (TAB_NOT_OPEN) e comanda não é apagável", async () => {
     const tab = await openedTab("cashierA", null);
-    expectOk(await as("cashierA").from("tabs").update({ status: "CLOSED" }).eq("id", tab.id).select("id"));
+    expectOk(await as("cashierA").rpc("close_tab", { p_tab: tab.id }));
     await expect(makeOrder(cleanup, A().id, { tabId: tab.id, fulfillment: "DINE_IN" })).rejects.toThrow(/TAB_NOT_OPEN/);
     expectDenied(await as("managerA").from("tabs").delete().eq("id", tab.id).select("id"));
     expect(rows(await admin().from("tabs").select("id").eq("id", tab.id))).toHaveLength(1);
@@ -192,17 +224,24 @@ describe("fechamento e cancelamento de comanda", () => {
   });
 });
 
-describe("mesas: cadastro (tables.manage) x operação (tables.operate)", () => {
-  it("garçom e caixa operam o estado (AVAILABLE -> OCCUPIED -> CLEANING -> AVAILABLE) mas não renomeiam nem desativam", async () => {
+describe("mesas: cadastro (tables.manage) x operação (tables.operate) — estado só por set_table_status / comanda", () => {
+  const setStatus = (who: AccountKey, tableId: string, to: string) => as(who).rpc("set_table_status", { p_table: tableId, p_to: to });
+
+  it("garçom e caixa: OCCUPIED/CLEANING vêm só da comanda (open_tab/close_tab); liberam a mesa com set_table_status; não renomeiam nem desativam", async () => {
     for (const who of ["waiterA", "cashierA"] as const) {
       const t = await makeTable(cleanup, A().id);
-      expectOk(await as(who).from("restaurant_tables").update({ status: "OCCUPIED" }).eq("id", t.id).select("id"));
-      expectOk(await as(who).from("restaurant_tables").update({ status: "CLEANING" }).eq("id", t.id).select("id"));
-      expectOk(await as(who).from("restaurant_tables").update({ status: "AVAILABLE" }).eq("id", t.id).select("id"));
+      const tab = await openedTab(who, t.id);
+      expect((await tableRow(t.id)).status).toBe("OCCUPIED");
+      expectOk(await as(who).rpc("close_tab", { p_tab: tab.id }));
+      expect((await tableRow(t.id)).status).toBe("CLEANING");
+      const free = await setStatus(who, t.id, "AVAILABLE");
+      expectOk(free);
+      expect(free.data).toMatchObject({ ok: true, unchanged: false, table: { status: "AVAILABLE" } });
 
       expectRule(await as(who).from("restaurant_tables").update({ name: "zz-renomeada" }).eq("id", t.id).select("id"), /FORBIDDEN/);
       expectRule(await as(who).from("restaurant_tables").update({ capacity: 99 }).eq("id", t.id).select("id"), /FORBIDDEN/);
-      expectRule(await as(who).from("restaurant_tables").update({ status: "INACTIVE" }).eq("id", t.id).select("id"), /FORBIDDEN/);
+      expectRule(await setStatus(who, t.id, "INACTIVE"), /FORBIDDEN/);
+      expectDenied(await as(who).from("restaurant_tables").update({ status: "INACTIVE" }).eq("id", t.id).select("id"), /42501|permission denied/);
       expectDenied(await as(who).from("restaurant_tables").insert({ restaurant_id: A().id, name: `zz-${uniq()}` }).select("id"));
       expectNotApplied(await as(who).from("restaurant_tables").delete().eq("id", t.id).select("id"));
       expect(await tableRow(t.id)).toMatchObject({ status: "AVAILABLE", name: t.name, capacity: 2 });
@@ -210,41 +249,43 @@ describe("mesas: cadastro (tables.manage) x operação (tables.operate)", () => 
   });
 
   it("cozinha não vê nem altera mesas (sem tables.view / tables.operate)", async () => {
-    const t = await makeTable(cleanup, A().id);
+    const t = await makeTable(cleanup, A().id, { status: "CLEANING" });
     expectNoRows(await as("kitchenA").from("restaurant_tables").select("id").eq("id", t.id));
-    expectNotApplied(await as("kitchenA").from("restaurant_tables").update({ status: "OCCUPIED" }).eq("id", t.id).select("id"));
-    expect((await tableRow(t.id)).status).toBe("AVAILABLE");
+    expectNotApplied(await as("kitchenA").from("restaurant_tables").update({ status: "AVAILABLE" }).eq("id", t.id).select("id"));
+    expectRule(await setStatus("kitchenA", t.id, "AVAILABLE"), /FORBIDDEN/);
+    expect((await tableRow(t.id)).status).toBe("CLEANING");
   });
 
   it("transições inválidas são rejeitadas para qualquer papel", async () => {
-    const cases: Array<[string, string]> = [
-      ["AVAILABLE", "CLEANING"],
-      ["INACTIVE", "OCCUPIED"],
-      ["INACTIVE", "CLEANING"],
-      ["OCCUPIED", "INACTIVE"],
-    ];
-    for (const [from, to] of cases) {
+    // destinos que só a comanda produz (OCCUPIED/CLEANING) nem são aceitos como p_to
+    for (const [from, to] of [["AVAILABLE", "CLEANING"], ["AVAILABLE", "OCCUPIED"], ["INACTIVE", "OCCUPIED"], ["INACTIVE", "CLEANING"]] as const) {
       const t = await makeTable(cleanup, A().id, { status: from });
-      expectRule(await as("managerA").from("restaurant_tables").update({ status: to }).eq("id", t.id).select("id"), /TABLE_INVALID_TRANSITION/);
+      expectRule(await setStatus("managerA", t.id, to), /INVALID_TABLE_STATUS/);
       expect((await tableRow(t.id)).status).toBe(from);
     }
+    // OCCUPIED (sem comanda aberta) -> INACTIVE não está na matriz
+    const t = await makeTable(cleanup, A().id, { status: "OCCUPIED" });
+    expectRule(await setStatus("managerA", t.id, "INACTIVE"), /TABLE_INVALID_TRANSITION/);
+    expect((await tableRow(t.id)).status).toBe("OCCUPIED");
+    // valor desconhecido
+    expectRule(await setStatus("managerA", t.id, "BROKEN"), /INVALID_TABLE_STATUS/);
   });
 
   it("não libera mesa com comanda aberta; depois de fechar, vira CLEANING e então AVAILABLE", async () => {
     const t = await makeTable(cleanup, A().id);
     const tab = await openedTab("waiterA", t.id);
-    expectRule(await as("waiterA").from("restaurant_tables").update({ status: "AVAILABLE" }).eq("id", t.id).select("id"), /TABLE_HAS_OPEN_TAB/);
-    expectRule(await as("waiterA").from("restaurant_tables").update({ status: "CLEANING" }).eq("id", t.id).select("id"), /TABLE_HAS_OPEN_TAB/);
+    expectRule(await setStatus("waiterA", t.id, "AVAILABLE"), /TABLE_HAS_OPEN_TAB/);
+    expectRule(await setStatus("managerA", t.id, "INACTIVE"), /TABLE_INVALID_TRANSITION|TABLE_HAS_OPEN_TAB/);
     expect((await tableRow(t.id)).status).toBe("OCCUPIED");
-    expectOk(await as("waiterA").from("tabs").update({ status: "CLOSED" }).eq("id", tab.id).select("id"));
+    expectOk(await as("waiterA").rpc("close_tab", { p_tab: tab.id }));
     expect((await tableRow(t.id)).status).toBe("CLEANING");
-    expectOk(await as("waiterA").from("restaurant_tables").update({ status: "AVAILABLE" }).eq("id", t.id).select("id"));
+    expectOk(await setStatus("waiterA", t.id, "AVAILABLE"));
   });
 
-  it("gerente desativa e só então apaga a mesa; mesa ativa não é apagável", async () => {
+  it("gerente desativa (set_table_status) e só então apaga a mesa; mesa ativa não é apagável", async () => {
     const t = await makeTable(cleanup, A().id);
     expect(rows(await as("managerA").from("restaurant_tables").delete().eq("id", t.id).select("id"))).toHaveLength(0);
-    expectOk(await as("managerA").from("restaurant_tables").update({ status: "INACTIVE" }).eq("id", t.id).select("id"));
+    expectOk(await setStatus("managerA", t.id, "INACTIVE"));
     const del = await as("managerA").from("restaurant_tables").delete().eq("id", t.id).select("id");
     expectOk(del);
     expect(rows(del)).toHaveLength(1);
