@@ -16,7 +16,7 @@ import { admin, anon, as, realtimeAs, world } from "../helpers/clients";
 import { expectDenied, expectOk, expectRule, rows } from "../helpers/expect";
 import { Cleanup, makeOrder, makeTable, tabRow, tableRow, uniq, waitFor } from "../helpers/factory";
 import { billTotals, requestTabPrintResultSchema } from "../../src/modules/printing/bill";
-import { closeTabResultSchema, cancelTabResultSchema, recordPaymentResultSchema, tabBalanceSchema } from "../../src/modules/tab-billing/types";
+import { closeTabResultSchema, recordPaymentResultSchema, tabBalanceSchema } from "../../src/modules/tab-billing/types";
 import { BASE_FULFILLMENT, clearTodayException, insertRow, makeMenuFixture, setOpenToday, setSettings, type MenuFixture } from "../helpers/menu";
 
 const A = () => world().restaurants.a;

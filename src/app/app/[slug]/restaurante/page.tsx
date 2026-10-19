@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
-import { ExternalLink, Hammer } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { ApiInfo } from "@/components/restaurant-profile/api-info";
+import { EstablishmentForm } from "@/components/restaurant-profile/establishment-form";
 import { ContactForm } from "@/components/restaurant-profile/contact-form";
 import { OriginsEditor } from "@/components/restaurant-profile/origins-editor";
 import { Alert } from "@/components/ui/alert";
 import { buttonStyles } from "@/components/ui/button";
-import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { getPublicEnvStatus } from "@/lib/env";
@@ -43,7 +43,7 @@ export default async function Page({ params }: PageProps<"/app/[slug]/restaurant
     <>
       <PageHeader
         title="Restaurante"
-        description="Contato, vitrine e acesso à API do seu cardápio."
+        description="Dados do estabelecimento, contato, vitrine e acesso à API do seu cardápio."
         actions={
           <Link
             href={`/r/${restaurant.slug}`}
@@ -60,6 +60,19 @@ export default async function Page({ params }: PageProps<"/app/[slug]/restaurant
       />
 
       <div className="flex max-w-3xl flex-col gap-6">
+        {profile.establishment ? (
+          <EstablishmentForm
+            slug={restaurant.slug}
+            restaurantId={restaurant.restaurant_id}
+            status={restaurant.status}
+            establishment={profile.establishment}
+          />
+        ) : (
+          <Alert tone="danger" title="Não foi possível carregar os dados do estabelecimento">
+            {LOAD_ERROR} A edição foi bloqueada para não sobrescrever os dados atuais.
+          </Alert>
+        )}
+
         {profile.contact ? (
           <ContactForm slug={restaurant.slug} contact={profile.contact} />
         ) : (
@@ -77,20 +90,6 @@ export default async function Page({ params }: PageProps<"/app/[slug]/restaurant
         )}
 
         <ApiInfo baseUrl={baseUrl} slug={restaurant.slug} />
-
-        <Card aria-labelledby="upcoming-title">
-          <CardHeader
-            title={<span id="upcoming-title">Dados cadastrais, horários e zonas de entrega</span>}
-            description="Ainda não é possível editar estes dados pelo painel."
-          />
-          <div className="flex items-start gap-3 text-sm text-muted">
-            <Hammer aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <p>
-              A edição do nome, dos horários de funcionamento e das zonas de entrega está prevista para a
-              Fase 5. Por enquanto, estes dados seguem como estão cadastrados.
-            </p>
-          </div>
-        </Card>
       </div>
     </>
   );

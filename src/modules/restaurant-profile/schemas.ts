@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidTimezone } from "./timezones";
 import {
   ADDRESS_MAX,
   normalizePhone,
@@ -62,3 +63,23 @@ export function fieldErrorsOf(error: z.ZodError): Record<string, string> {
   }
   return result;
 }
+
+export const NAME_MIN = 2;
+export const NAME_MAX = 120;
+
+/** Dados do estabelecimento. `logoPath` é o arquivo já enviado ao Storage (ou null). */
+export const establishmentSchema = z.object({
+  name: z
+    .string()
+    .transform((value) => value.trim().replace(/\s+/g, " "))
+    .pipe(
+      z
+        .string()
+        .min(NAME_MIN, `Informe o nome (mínimo de ${NAME_MIN} caracteres).`)
+        .max(NAME_MAX, `Nome muito longo (máximo de ${NAME_MAX} caracteres).`),
+    ),
+  timezone: z.string().refine(isValidTimezone, "Escolha um fuso horário válido."),
+  logoPath: z.string().max(300).nullable(),
+  removeLogo: z.boolean(),
+});
+export type EstablishmentInput = z.input<typeof establishmentSchema>;

@@ -207,3 +207,27 @@ Divisão de conta por pessoa e pagamento misto avançado ficam fora do MVP (vár
 - **OPS-C2**: `src/components/tab-billing/**`, `src/modules/tab-billing/**`, `src/modules/printing/**`, `src/components/printing/**`.
 - **ADMIN-T**: `src/app/app/[slug]/{mesas,comandas}/**`, `src/modules/tables-admin/**`, `src/components/tables-admin/**`.
 - **TESTS4** (por último): `tests/**`, `scripts/**`.
+
+---
+
+# Fase 5 — Painel do dono (contrato)
+
+Regra central: o painel `/app/[slug]` é de **gestão e monitoramento**. Pedidos, comandas e mesas ficam em modo leitura (já feito para comandas/mesas);
+nenhuma ação operacional. Relatórios/dashboard exigem `reports.view`; equipe exige `team.manage` (só owner); configurações exigem `restaurant.settings.manage`
+(owner/manager). Faturamento ≠ lucro (sem custos). Dados 100% reais, filtros de período no fuso do restaurante.
+
+## RPCs (DB-7, migrações `20260101000124+`; SECURITY DEFINER, `search_path=''`, authenticated; permissão validada dentro; erros `CODIGO: texto`)
+
+- `dashboard_metrics(p_restaurant uuid, p_from timestamptz, p_to timestamptz) returns jsonb` — `reports.view`: `{period:{from,to,timezone}, orders_count, gross_sales_cents (pedidos exceto CANCELLED/REJECTED), completed_sales_cents (COMPLETED), avg_ticket_cents (sobre gross), in_progress_orders, open_tabs, occupied_tables, tables_total, cancelled_count, rejected_count, by_fulfillment:[{type,orders,sales_cents}], top_products:[{name,variant?,quantity,sales_cents}] (10, por snapshots de order_items), sales_series:[{day (data local),orders,sales_cents}] , payment_methods:[{method,amount_cents,count}] (payments PAID)}`.
+- `restaurant_report(p_restaurant uuid, p_report text, p_from timestamptz, p_to timestamptz, p_group text default 'day') returns jsonb` — `reports.view`; `p_report` ∈ `sales_by_period` (group day|week|month), `orders_by_fulfillment`, `top_products`, `avg_ticket` (por período), `cancellations` (motivos e contagens), `fees_discounts` (taxas de entrega e descontos por período), `payment_methods`; retorna `{report, columns:[{key,label,type}], rows:[...], totals:{...}, truncated:bool}` (máx. 5000 linhas), valores em centavos.
+- `list_customers(p_restaurant uuid, p_search text default null, p_cursor jsonb default null, p_limit int default 25) returns jsonb` — `reports.view` ou `orders.view`: `{rows:[{id,name,phone,email,orders_count,last_order_at,total_spent_cents (exclui cancelados/recusados)}], next_cursor}` (keyset por last_order_at/id; busca por nome/telefone); `get_customer(p_restaurant uuid, p_customer uuid) returns jsonb` — mesmo requisito; `{customer, addresses:[...], orders:[{order_number,created_at,fulfillment_type,status,total_cents}]}`; grava `audit_logs` `customer.viewed` (LGPD).
+- `list_team(p_restaurant uuid) returns jsonb` — `team.manage`: membros `{membership_id,user_id,full_name,email,role,status,invited_email,permissions:[efetivas],overrides:[{permission,granted}],created_at,last_sign_in_at}` (email só via definer, nunca ao cliente sem a permissão).
+- `list_audit_logs(p_restaurant uuid, p_action_prefix text default null, p_from timestamptz default null, p_to timestamptz default null, p_limit int default 50, p_before jsonb default null) returns jsonb` — `team.manage`: `{rows:[{id,created_at,actor_id,actor_name,action,resource_type,resource_id,metadata (sanitizado: sem tokens/segredos)}], next_cursor}`.
+- Equipe/convites reutilizam as RPCs existentes: `invite_member`, `change_member_role`, `revoke_member`, `set_member_permission` (owner nunca recebe permissão operacional; `team.manage` não delegável).
+- Configurações usam as tabelas existentes (`restaurants` nome/logo/timezone, `restaurant_settings`, `business_hours`, `business_hour_exceptions`, `delivery_zones`) com RLS `restaurant.settings.manage`; DB-7 só corrige lacunas de grants/validação.
+
+## Divisão
+
+- **Leva 1** — DB-7: `supabase/migrations/20260101000124+`. TEAM: `src/app/app/[slug]/equipe/**`, `src/modules/team/**`, `src/components/team/**`. SETTINGS: `src/app/app/[slug]/{restaurante,configuracoes}/**`, `src/modules/restaurant-profile/**` (existe), `src/modules/restaurant-settings/**`, `src/components/restaurant-profile/**` (existe), `src/components/restaurant-settings/**`.
+- **Leva 2** — DASH: `src/app/app/[slug]/{dashboard,pedidos}/**`, `src/modules/dashboard/**`, `src/components/dashboard/**`. REPCUST: `src/app/app/[slug]/{relatorios,clientes}/**`, `src/modules/reports/**`, `src/modules/customers/**`, `src/components/reports/**`, `src/components/customers/**`.
+- **TESTS5**: `tests/**`, `scripts/**`.

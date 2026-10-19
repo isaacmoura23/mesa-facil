@@ -5,10 +5,22 @@ import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { getPublicEnvStatus } from "@/lib/env";
 import { GENERIC_ERROR_MESSAGE, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
+import { PUBLIC_BUCKET } from "@/lib/storage";
+import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/modules/menu/image";
+import { z } from "zod";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { storefrontMenuTag } from "@/modules/menu/tags";
 import { normalizeOriginList } from "./format";
-import { contactSchema, fieldErrorsOf, formToRecord, originsInputSchema, slugSchema } from "./schemas";
+import { isOwnLogoPath } from "./logo";
+import {
+  contactSchema,
+  establishmentSchema,
+  fieldErrorsOf,
+  formToRecord,
+  originsInputSchema,
+  slugSchema,
+  type EstablishmentInput,
+} from "./schemas";
 import type { ActionResult } from "./types";
 
 /**
@@ -57,6 +69,9 @@ function checkViolationMessage(message: string | undefined): string {
   if (message?.includes("storefront_url_fmt")) {
     return "Endereço da vitrine inválido. Use https:// e no máximo 200 caracteres.";
   }
+  if (message?.includes("timezone")) return "Fuso horário inválido.";
+  if (message?.includes("logo_path")) return "Logo inválida. Envie o arquivo novamente.";
+  if (message?.includes("name")) return "Nome inválido. Use de 2 a 120 caracteres.";
   if (message?.includes("storefront_origins_valid")) {
     return "Domínios inválidos: use até 5 endereços https exatos, sem repetir, sem curinga e sem caminho.";
   }
@@ -145,5 +160,99 @@ export async function saveOriginsAction(slug: string, origins: string[]): Promis
       normalized.value.length > 0
         ? "A API pode levar cerca de 1 minuto para reconhecer a mudança."
         : undefined,
+  };
+}
+
+const storageObjectSchema = z.object({
+  name: z.string(),
+  metadata: z
+    .object({ size: z.number().optional(), mimetype: z.string().optional() })
+    .nullable()
+    .optional(),
+});
+
+/** Confere no Storage se o logo enviado existe e respeita tipo e tamanho. */
+async function verifyUploadedLogo(ctx: Context, path: string): Promise<string | null> {
+  const lastSlash = path.lastIndexOf("/");
+  const fileName = path.slice(lastSlash + 1);
+  const { data, error } = await ctx.supabase.storage
+    .from(PUBLIC_BUCKET)
+    .list(path.slice(0, lastSlash), { search: fileName, limit: 5 });
+  if (error) return "Não foi possível conferir a logo enviada.";
+
+  const objects = z.array(storageObjectSchema).safeParse(data);
+  const found = objects.success ? objects.data.find((item) => item.name === fileName) : undefined;
+  if (!found) return "Não encontramos a logo enviada. Envie o arquivo novamente.";
+
+  const size = found.metadata?.size;
+  const mimetype = found.metadata?.mimetype;
+  if (
+    (typeof size === "number" && size > MAX_IMAGE_BYTES) ||
+    (typeof mimetype === "string" && !ALLOWED_IMAGE_TYPES.includes(mimetype))
+  ) {
+    await ctx.supabase.storage.from(PUBLIC_BUCKET).remove([path]);
+    return "A logo enviada não atende aos requisitos (JPG, PNG, WebP ou AVIF, até 5 MB).";
+  }
+  return null;
+}
+
+/**
+ * Nome, fuso horário e logo. O arquivo da logo já foi enviado pelo navegador (cliente do
+ * usuário, RLS do Storage) para `restaurants/{id}/logo/{uuid}.{ext}`; aqui o caminho é
+ * conferido, salvo e só então o arquivo antigo é removido. Slug e status NÃO são editáveis.
+ */
+export async function saveEstablishmentAction(slug: string, input: EstablishmentInput): Promise<ActionResult> {
+  const auth = await authorize(slug);
+  if (!auth.ok) return auth.result;
+  const { ctx } = auth;
+
+  const parsed = establishmentSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Revise os campos destacados.", fieldErrors: fieldErrorsOf(parsed.error) };
+  }
+  const { name, timezone, logoPath, removeLogo } = parsed.data;
+
+  const newLogo = logoPath !== null && isOwnLogoPath(logoPath, ctx.restaurantId) ? logoPath : null;
+  if (logoPath !== null && newLogo === null) {
+    return { ok: false, message: "Logo inválida. Envie o arquivo novamente.", fieldErrors: { logo: "Logo inválida." } };
+  }
+  if (newLogo) {
+    const problem = await verifyUploadedLogo(ctx, newLogo);
+    if (problem) return { ok: false, message: problem, fieldErrors: { logo: problem } };
+  }
+
+  const before = await ctx.supabase.from("restaurants").select("logo_path").eq("id", ctx.restaurantId).maybeSingle();
+  const oldLogo = typeof before.data?.logo_path === "string" ? before.data.logo_path : null;
+
+  const patch: Record<string, string | null> = { name, timezone };
+  if (newLogo) patch.logo_path = newLogo;
+  else if (removeLogo) patch.logo_path = null;
+
+  const { data, error } = await ctx.supabase
+    .from("restaurants")
+    .update(patch)
+    .eq("id", ctx.restaurantId)
+    .select("id");
+  if (error || !data?.length) {
+    // Não salvou: não deixa o arquivo novo órfão no bucket.
+    if (newLogo) await ctx.supabase.storage.from(PUBLIC_BUCKET).remove([newLogo]);
+    return error
+      ? failure(error, "Não foi possível salvar agora.")
+      : { ok: false, message: "Não foi possível salvar agora." };
+  }
+
+  // Só depois de salvar o novo caminho o arquivo antigo é removido (melhor esforço).
+  const logoChanged = "logo_path" in patch && patch.logo_path !== oldLogo;
+  if (oldLogo && logoChanged && isOwnLogoPath(oldLogo, ctx.restaurantId)) {
+    await ctx.supabase.storage.from(PUBLIC_BUCKET).remove([oldLogo]);
+  }
+
+  revalidatePath(`/app/${ctx.slug}`, "layout");
+  revalidatePath(`/r/${ctx.slug}`, "layout");
+  updateTag(storefrontMenuTag(ctx.slug));
+  return {
+    ok: true,
+    message: "Dados do estabelecimento atualizados.",
+    warning: "Nome, logo e fuso aparecem na vitrine na hora. Os pedidos já feitos não mudam.",
   };
 }

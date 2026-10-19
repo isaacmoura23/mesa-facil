@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { contactRowSchema, originsSchema, type RestaurantProfileData } from "./types";
+import { contactRowSchema, establishmentRowSchema, originsSchema, type RestaurantProfileData } from "./types";
 
 /**
  * Lê o contato e as origens da vitrine com o cliente do usuário (RLS).
@@ -12,14 +12,21 @@ import { contactRowSchema, originsSchema, type RestaurantProfileData } from "./t
 export async function getRestaurantProfile(restaurantId: string): Promise<RestaurantProfileData> {
   const supabase = await createClient();
 
-  const [settings, origins] = await Promise.all([
+  const [settings, origins, establishmentRow] = await Promise.all([
     supabase
       .from("restaurant_settings")
       .select("whatsapp, phone, address_text, storefront_url")
       .eq("restaurant_id", restaurantId)
       .maybeSingle(),
     supabase.rpc("get_storefront_origins", { p_restaurant: restaurantId }),
+    supabase.from("restaurants").select("name, logo_path, timezone").eq("id", restaurantId).maybeSingle(),
   ]);
+
+  let establishment: RestaurantProfileData["establishment"] = null;
+  if (!establishmentRow.error) {
+    const parsed = establishmentRowSchema.safeParse(establishmentRow.data);
+    if (parsed.success) establishment = parsed.data;
+  }
 
   let contact: RestaurantProfileData["contact"] = null;
   if (!settings.error) {
@@ -37,5 +44,5 @@ export async function getRestaurantProfile(restaurantId: string): Promise<Restau
     if (parsed.success) originList = parsed.data;
   }
 
-  return { contact, origins: originList };
+  return { contact, origins: originList, establishment };
 }

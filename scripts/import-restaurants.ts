@@ -15,10 +15,16 @@
  *   --src-root=<dir>     raiz das pastas irmãs com imagens (padrão: pasta acima do projeto)
  *   --api-base=<url>     base da API pública para a verificação (padrão: http://localhost:3100)
  *   --no-api             não consulta a API pública na verificação (só a RPC public_menu)
- *   --allow-remote       permite alvo que não seja localhost, MAS exige confirmação interativa (digitar o host)
+ *   --allow-remote       permite alvo que não seja localhost, MAS exige confirmação (interativa: digitar o host;
+ *                        ou não interativa: --confirm-remote-host)
+ *   --confirm-remote-host=<host>  confirmação NÃO interativa de --allow-remote; precisa ser EXATAMENTE o host do
+ *                        SUPABASE_URL (qualquer divergência recusa). Sem --allow-remote é recusado.
+ *   --env-file=<caminho> usa SÓ esse arquivo (NEXT_PUBLIC_SUPABASE_URL/ANON_KEY e SUPABASE_SERVICE_ROLE_KEY) em vez de
+ *                        .env.local / `supabase status` (ex.: .env.deploy)
+ *   --credentials-file=<caminho>  onde gravar as senhas dos donos (padrão: scripts/data/.local-owner-credentials.json)
  *
- * Segurança: recusa URL do Supabase que não seja localhost/127.0.0.1; usa a service role só de .env.local /
- * `supabase status`; nunca imprime chaves nem senhas.
+ * Segurança: recusa URL do Supabase que não seja localhost/127.0.0.1 (salvo --allow-remote + confirmação); usa a
+ * service role só de .env.local / `supabase status` (ou do --env-file); nunca imprime chaves nem senhas.
  *
  * Fonte dos dados: scripts/data/*.json (transcritos dos sites públicos e dos cardápios-fonte nas pastas irmãs).
  * Nada é inventado: o que o site não informa fica de fora (ver docs no relatório do agente IMPORT).
@@ -46,6 +52,9 @@ interface Args {
   apiBase: string | null;
   noApi: boolean;
   allowRemote: boolean;
+  envFile: string | null;
+  confirmRemoteHost: string | null;
+  credentialsFile: string | null;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -59,6 +68,9 @@ function parseArgs(argv: string[]): Args {
     apiBase: null,
     noApi: false,
     allowRemote: false,
+    envFile: null,
+    confirmRemoteHost: null,
+    credentialsFile: null,
   };
   const known = new Set(["--dry-run", "--reset", "--create-only", "--prune", "--no-api", "--allow-remote"]);
   for (const raw of argv) {
@@ -74,6 +86,9 @@ function parseArgs(argv: string[]): Args {
     } else if (flag === "--only" && val) a.only = val;
     else if (flag === "--src-root" && val) a.srcRoot = path.resolve(val);
     else if (flag === "--api-base" && val) a.apiBase = val;
+    else if (flag === "--env-file" && val) a.envFile = path.resolve(val);
+    else if (flag === "--confirm-remote-host" && val) a.confirmRemoteHost = val;
+    else if (flag === "--credentials-file" && val) a.credentialsFile = path.resolve(val);
     else throw new Error(`Opção desconhecida: ${raw}`);
   }
   if (a.createOnly && a.prune) throw new Error("--create-only e --prune são incompatíveis.");
@@ -93,7 +108,8 @@ function loadData(only: string | null): ImportData[] {
 // ---------------------------------------------------------------------------
 // Contas locais dos donos
 // ---------------------------------------------------------------------------
-const CREDS_PATH = () => path.join(projectRoot(), "scripts", "data", ".local-owner-credentials.json");
+let credsOverride: string | null = null;
+const CREDS_PATH = () => credsOverride ?? path.join(projectRoot(), "scripts", "data", ".local-owner-credentials.json");
 
 interface Creds {
   _note: string;
@@ -117,7 +133,14 @@ function writeCreds(c: Creds) {
   writeFileSync(CREDS_PATH(), JSON.stringify(c, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
 }
 
-const generatePassword = () => randomBytes(18).toString("base64url");
+/** 24 caracteres base64url; regenera até ter minúscula, maiúscula, dígito e símbolo (políticas de senha da nuvem). */
+function generatePassword(): string {
+  for (let i = 0; i < 50; i++) {
+    const p = randomBytes(18).toString("base64url");
+    if (/[a-z]/.test(p) && /[A-Z]/.test(p) && /[0-9]/.test(p) && /[-_]/.test(p)) return p;
+  }
+  return randomBytes(18).toString("base64url") + "aA1-";
+}
 
 async function listAllUsers(admin: Admin): Promise<{ id: string; email?: string }[]> {
   const all: { id: string; email?: string }[] = [];
@@ -183,6 +206,7 @@ function printCounts(label: string, d: ImportData) {
 export async function main(argv: string[] = process.argv.slice(2)): Promise<number> {
   const args = parseArgs(argv);
   const datasets = loadData(args.only);
+  credsOverride = args.credentialsFile;
 
   console.log("[import] dados validados:");
   for (const d of datasets) printCounts(d.restaurant.slug, d);
@@ -191,7 +215,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     return 0;
   }
 
-  const env = await loadImportEnv({ allowRemote: args.allowRemote });
+  const env = await loadImportEnv({ allowRemote: args.allowRemote, envFile: args.envFile, confirmRemoteHost: args.confirmRemoteHost });
   const admin = createClient(env.url, env.serviceKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
   console.log(`[import] alvo: ${env.url} (${env.isLocal ? "local" : "REMOTO confirmado"})`);
 
@@ -236,8 +260,8 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<numb
     }
   }
 
-  console.log(`\n[import] contas locais dos donos: ${Object.values(ownerEmails).join(", ")}`);
-  console.log(`[import] senhas em ${path.relative(projectRoot(), CREDS_PATH()).replace(/\\/g, "/")} (adicione ao .gitignore; não é impresso aqui)`);
+  console.log(`\n[import] contas ${env.isLocal ? "locais " : ""}dos donos: ${Object.values(ownerEmails).join(", ")}`);
+  console.log(`[import] senhas em ${path.relative(projectRoot(), CREDS_PATH()).replace(/\\/g, "/")} (arquivo ignorado pelo git; senhas não são impressas)`);
   return failed ? 1 : 0;
 }
 

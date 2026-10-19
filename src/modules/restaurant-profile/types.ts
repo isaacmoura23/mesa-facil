@@ -19,4 +19,12 @@ export const originsSchema = z.array(z.string());
 export type RestaurantProfileData = {
   contact: ContactRow | null;
   origins: string[] | null;
+  establishment: EstablishmentRow | null;
 };
+
+export const establishmentRowSchema = z.object({
+  name: z.string(),
+  logo_path: z.string().nullable(),
+  timezone: z.string(),
+});
+export type EstablishmentRow = z.infer<typeof establishmentRowSchema>;

@@ -115,6 +115,23 @@ async function cleanupLeftovers(admin: Admin): Promise<void> {
   must(await admin.from("support_sessions").update({ ended_at: new Date().toISOString() }).in("restaurant_id", demoIds).is("ended_at", null), "close stale support sessions");
 }
 
+/** Apaga (recursivamente) os objetos de um prefixo do Storage: logos/imagens de teste ou de UI nos restaurantes DEMO. */
+async function removeStorageTree(admin: Admin, bucket: string, prefix: string): Promise<void> {
+  const files: string[] = [];
+  const walk = async (dir: string, depth: number): Promise<void> => {
+    if (depth > 4) return;
+    const { data, error } = await admin.storage.from(bucket).list(dir, { limit: 1000 });
+    if (error || !data) return;
+    for (const e of data) {
+      const full = `${dir}/${e.name}`;
+      if (e.id === null || e.id === undefined) await walk(full, depth + 1);
+      else files.push(full);
+    }
+  };
+  await walk(prefix, 0);
+  for (let i = 0; i < files.length; i += 100) await admin.storage.from(bucket).remove(files.slice(i, i + 100));
+}
+
 // ---------------------------------------------------------------------------
 // Restaurantes + vínculos + plataforma
 // ---------------------------------------------------------------------------
@@ -143,6 +160,12 @@ async function ensureRestaurants(admin: Admin, users: Record<AccountKey, { id: s
   const demoIds = Object.values(DEMO_RESTAURANTS).map((r) => r.id);
   must(await admin.from("membership_permission_overrides").delete().in("restaurant_id", demoIds), "reset overrides");
   must(await admin.from("restaurant_memberships").delete().in("restaurant_id", demoIds).is("user_id", null), "drop pending invites");
+  // Fase 5: vínculos de qualquer usuário fora das contas DEMO (convites aceitos pela UI/testes) também saem.
+  const seedUserIds = new Set(ACCOUNT_KEYS.filter((k) => ACCOUNTS[k].restaurant).map((k) => users[k].id));
+  const strayMemberships = (must(await admin.from("restaurant_memberships").select("id,user_id,restaurant_id").in("restaurant_id", demoIds), "list memberships") as Row[])
+    .filter((m) => m.user_id && !seedUserIds.has(m.user_id as string))
+    .map((m) => m.id as string);
+  if (strayMemberships.length) must(await admin.from("restaurant_memberships").delete().in("id", strayMemberships), "drop stray memberships");
 
   for (const key of ACCOUNT_KEYS) {
     const def = ACCOUNTS[key];
@@ -254,6 +277,7 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
     "settings",
   );
   must(await admin.from("restaurants").update({ logo_path: null, timezone: "America/Sao_Paulo" }).eq("id", rid), "restaurant branding");
+  await removeStorageTree(admin, "restaurant-public", `restaurants/${rid}`);
   const hoursNow = must(await admin.from("business_hours").select("id,weekday,opens_at,closes_at").eq("restaurant_id", rid), "hours") as Row[];
   const hoursOk =
     hoursNow.length === 7 &&
@@ -294,6 +318,8 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
   // Cliente + endereço
   const phone = k === "a" ? "11999990001" : "11999990002";
   const customer = await ensureOne(admin, "customers", { restaurant_id: rid, phone }, { name: `DEMO Cliente ${suffix}`, email: `cliente.${k}@example.test` });
+  // Clientes que não são do seed (ZZ*/zz-* de UI e testes; os pedidos deles já foram podados acima).
+  must(await admin.from("customers").delete().eq("restaurant_id", rid).neq("id", customer.id), "prune customers");
   await ensureOne(admin, "customer_addresses", { restaurant_id: rid, customer_id: customer.id, street: "Rua DEMO" }, { number: "100", neighborhood: "Centro", city: "São Paulo", state: "SP", is_default: true });
 
   // Comanda aberta na Mesa 1 (a mesa passa a OCCUPIED via trigger)

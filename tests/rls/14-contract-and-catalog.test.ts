@@ -272,8 +272,8 @@ describe("endurecimento (achados em tests/FINDINGS.md)", () => {
       // o caminho legítimo
       const rotated = await as("ownerA").rpc("rotate_table_qr", { p_table: created.data!.id });
       expectOk(rotated);
-      expect((rotated.data as any).qr_token).not.toBe(token);
-      expect((await admin().from("restaurant_tables").select("qr_token").eq("id", created.data!.id).single()).data?.qr_token).toBe((rotated.data as any).qr_token);
+      expect((rotated.data as { qr_token: string }).qr_token).not.toBe(token);
+      expect((await admin().from("restaurant_tables").select("qr_token").eq("id", created.data!.id).single()).data?.qr_token).toBe((rotated.data as { qr_token: string }).qr_token);
     } finally {
       if (mine.length) await admin().from("restaurant_tables").delete().in("id", mine);
       await admin().from("restaurant_tables").delete().like("name", "zz-qr-%");

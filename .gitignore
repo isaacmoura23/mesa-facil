@@ -46,3 +46,10 @@ scripts/data/.local-owner-credentials.json
 
 # artefatos locais de agentes/navegador
 .playwright-mcp/
+
+# deploy: credenciais geradas para a demo publicada (nunca versionar)
+scripts/data/.deploy-credentials.json
+.env.deploy
+
+.vercel
+.env*

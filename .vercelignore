@@ -1,0 +1,10 @@
+# Nunca enviar segredos, dados locais, testes nem scripts para a Vercel
+.env*
+.env.deploy
+scripts/
+tests/
+docs/
+.claude/
+.playwright-mcp/
+supabase/.temp/
+*.tsbuildinfo

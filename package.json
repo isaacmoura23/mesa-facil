@@ -28,11 +28,13 @@
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^18.0.8",
     "eslint": "^9",
     "eslint-config-next": "16.4.1",
+    "pg": "^8.23.1",
     "supabase": "^2.121.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
