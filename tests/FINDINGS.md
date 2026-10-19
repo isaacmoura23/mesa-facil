@@ -168,3 +168,28 @@ Origem: `tests/rls/22-tab-rpcs` (migs. 0117-0123, só clientes autenticados reai
 - **Conta impressa**: payload montado no servidor sem telefone, e-mail, nome de cliente, endereço, ids de usuário nem justificativa interna (mesmo com um pedido da comanda cheio de dados de cliente), itens consolidados, pagamentos com troco, saldo, `total_cents`/`unpaid_cents` só em comanda CLOSED, PARTIAL só em OPEN, CANCELLED => `TAB_NOT_BILLABLE`, `mark_print_job` só pelo solicitante e nunca PRINTED; a resposta real passa nos schemas do app (`requestTabPrintResultSchema`, `tabBalanceSchema`).
 - **QR**: `rotate_table_qr` gera token de 16+ caracteres no servidor, sempre novo, e o token (antigo ou novo) nunca aparece em `audit_logs`; cliente nenhum grava `qr_token` (insert nem update; B não consegue sondar colisão com token de A).
 - **Realtime**: `tabs`, `restaurant_tables` e `payments` de A chegam ao caixa e ao garçom de A e nunca a B (e vice-versa); o garçom recebe comandas e mesas mas nenhum `payments` (RLS `payments_select`).
+
+
+---
+
+# Achados da Fase 5 (painel do dono: relatórios, clientes, equipe, auditoria, configurações)
+
+Origem: `tests/rls/23`, `24`, `25` (migs. 0124-0127, só clientes autenticados reais) e `unit/period`, `unit/reports`, `unit/customers-team-settings`. **Nenhuma falha de isolamento entre restaurantes, escalonamento de privilégio, vazamento de PII/segredo nas respostas, mover linhas de configuração entre restaurantes ou número de relatório divergente do cálculo independente foi encontrada.** (Fuso inválido nunca chega ao banco: o trigger o recusa até para service role, então o fallback `report_tz` fica só como rede de segurança.)
+
+| # | Sev. | Tema | Onde | Teste |
+|---|---|---|---|---|
+| F-42 | Info | `isValidTimezone` usa `Intl`, que ignora caixa (`america/sao_paulo` passa); o banco compara com `pg_timezone_names` (sensível a caixa) e responde `INVALID_TIMEZONE`. Mesma classe do F-20: validador do app aceita o que o banco recusa. Correção: comparar com `Intl.supportedValuesOf('timeZone')` ou exigir `resolvedOptions().timeZone === valor` | `restaurant-profile/timezones.ts` | `unit/customers-team-settings` `it.fails` |
+| F-43 | Baixa | CHECK `delivery_zones_prefixes_valid` valida `array_to_string(...)`, não cada elemento: `['']` (prefixo vazio, casaria TODO CEP) e `['1,2']` passam. Correção: `not exists (select 1 from unnest(postal_code_prefixes) p where p !~ '^[0-9]{1,8}$')` | mig. 0126 | `25` `it.fails` |
+| F-44 | Baixa | `sanitize_audit_metadata` não remove chaves em português (`senha`, `segredo`, `chave_api`), embora o cabeçalho da 0125 prometa "senha" (o app, em `team/audit.ts`, já filtra `senha`). Correção: acrescentar `senha|segred|chave` à regex | mig. 0125 | `24` `it.fails` |
+| F-45 | Info | Valor `Bearer eyJ...` (ou JWT com espaço antes) em metadata passa: a máscara só vale para strings que COMEÇAM com `eyJ`. Correção: regex `(^|\s)(bearer\s+)?eyJ...` | mig. 0125 | `24` (documentado, passa) |
+| F-46 | Info | Triggers de horário não checam o transbordo da virada de dia sobre o dia seguinte (Seg 22:00-02:00 e Ter 01:00-03:00 coexistem); o app (`validateWeek`) checa. Quem escreve direto pela API fura a regra do app | mig. 0126 | `25` (documentado, passa) |
+| F-47 | Baixa | Decisão "clientes só `reports.view`" vale só nas RPCs: `customers_select` (RLS) segue permitindo `orders.view`, então caixa/cozinha/garçom leem nome/telefone/e-mail por REST direto, sem a trilha `customer.viewed`. Aceito pelo contrato (0127 não muda a RLS); fechar exigiria restringir o SELECT e usar RPC no fluxo de pedidos | RLS `customers` | `24` (documentado, passa) |
+| F-48 | Info | `paymentMethodName('constructor'/'toString')` (dashboard) devolve FUNÇÃO (`PAYMENT_METHOD_NAMES[m] ??`); mesma classe de F-19/F-39. Correção: `Object.hasOwn` | `dashboard/types.ts` | `unit/period` `it.fails` |
+| F-49 | Info | `isOwnLogoPath`: flag `/i` aceita `RESTAURANTS/...`, UUID em maiúsculas e `.PNG` (o CHECK do banco recusa); `restaurantId` é interpolado sem escapar (`.*` casa tudo). Mesma causa do F-20 | `restaurant-profile/logo.ts` | `unit/customers-team-settings` `it.fails` x2 |
+
+## Decisões e comportamentos verificados (não são bugs)
+
+- **Clientes só `reports.view`** (mig. 0127): owner/manager listam e abrem; cashier/kitchen/waiter => `FORBIDDEN`; override `reports.view` concede/retira normalmente. Cliente de outro restaurante == inexistente (`CUSTOMER_NOT_FOUND` idêntico).
+- **Horários salvos por diff, não atômico**: a tela grava a grade comparando com o estado atual (insere/atualiza/apaga linha a linha). Os triggers (limite de 6 faixas/dia, sobreposição) valem a cada linha sob lock advisory; uma falha no meio deixa a grade parcialmente aplicada. Sem teste de UI aqui; o banco foi testado sob concorrência (10 inserções => exatamente 6).
+- Relatórios: janela `[from,to)`, semana ISO (bucket pode começar antes de `from`), 366 dias de relógio = 367 datas locais em SP; `gross` exclui CANCELLED/REJECTED; ticket médio sobre gross; `payment_methods` só PAID por `paid_at`; motivos de cancelamento mascarados (e-mail, >= 6 dígitos), fórmula `=cmd` NÃO é alterada no banco (o CSV do app a neutraliza). Truncamento: 5000 linhas exatas => `truncated=false`; 5001 => true com totais completos.
+- `audit_logs` é append-only: as linhas de teste (restaurante efêmero) ficam no banco.
