@@ -1,0 +1,1150 @@
+{
+  "_source": "https://qibuxo-catalogo.vercel.app (/api/catalog v5, idêntico a src/data/seed.ts) + pasta local qibuxo/",
+  "restaurant": {
+    "name": "Qi Buxo",
+    "slug": "qibuxo",
+    "timezone": "America/Fortaleza"
+  },
+  "settings": {
+    "storefrontUrl": "https://qibuxo-catalogo.vercel.app",
+    "storefrontOrigins": [
+      "https://qibuxo-catalogo.vercel.app"
+    ],
+    "whatsapp": "5585994084103",
+    "phone": null,
+    "addressText": "R. Maria Joaquina, Ocara - CE, 62755-000",
+    "fulfillmentTypes": [
+      "DELIVERY",
+      "PICKUP"
+    ],
+    "minOrderCents": null
+  },
+  "deliveryZone": {
+    "name": "Entrega",
+    "feeCents": 200,
+    "demoValue": true
+  },
+  "hours": [
+    {
+      "weekday": 0,
+      "opensAt": "09:00",
+      "closesAt": "12:00"
+    },
+    {
+      "weekday": 1,
+      "opensAt": "08:00",
+      "closesAt": "18:00"
+    },
+    {
+      "weekday": 2,
+      "opensAt": "08:00",
+      "closesAt": "18:00"
+    },
+    {
+      "weekday": 3,
+      "opensAt": "08:00",
+      "closesAt": "18:00"
+    },
+    {
+      "weekday": 4,
+      "opensAt": "08:00",
+      "closesAt": "18:00"
+    },
+    {
+      "weekday": 5,
+      "opensAt": "08:00",
+      "closesAt": "18:00"
+    },
+    {
+      "weekday": 6,
+      "opensAt": "08:00",
+      "closesAt": "18:00"
+    }
+  ],
+  "logoFile": "qibuxo/public/img/marca-logo.webp",
+  "modifierGroups": [
+    {
+      "name": "Extras para o bolo",
+      "min": 0,
+      "max": 6,
+      "modifiers": [
+        {
+          "name": "Glitter",
+          "priceDeltaCents": 1500
+        },
+        {
+          "name": "Flores artificiais",
+          "priceDeltaCents": 2000
+        },
+        {
+          "name": "Topo 3D",
+          "priceDeltaCents": 2500
+        },
+        {
+          "name": "Cores metalizadas",
+          "priceDeltaCents": 1500
+        },
+        {
+          "name": "Frutas",
+          "priceDeltaCents": 2000
+        },
+        {
+          "name": "Doces",
+          "priceDeltaCents": 3000
+        }
+      ]
+    },
+    {
+      "name": "Recheio do Pinguinho",
+      "min": 0,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Brigadeiro",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Ninho",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Doce de leite",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Morango",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Extras para o bolo (3 e 4 andares)",
+      "min": 0,
+      "max": 2,
+      "modifiers": [
+        {
+          "name": "Glitter",
+          "priceDeltaCents": 1500
+        },
+        {
+          "name": "Flores artificiais",
+          "priceDeltaCents": 2000
+        }
+      ]
+    },
+    {
+      "name": "Sabores (doces tradicionais)",
+      "min": 1,
+      "max": 5,
+      "modifiers": [
+        {
+          "name": "Prestígio",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Brigadeiro",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Beijinho",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Ninho",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Casadinho",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Cobertura (brownie)",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Nutella",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Ninho",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Sabores (salgados)",
+      "min": 1,
+      "max": 3,
+      "modifiers": [
+        {
+          "name": "Coxinha de frango",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Risole de calabresa",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Bolinha de queijo",
+          "priceDeltaCents": 0
+        }
+      ]
+    },
+    {
+      "name": "Sabor (cone trufado)",
+      "min": 1,
+      "max": 1,
+      "modifiers": [
+        {
+          "name": "Amendoim",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Ninho",
+          "priceDeltaCents": 0
+        },
+        {
+          "name": "Chocolate",
+          "priceDeltaCents": 0
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "name": "Kits",
+      "description": "Bolo, salgados e doces já combinados para a sua festa.",
+      "products": [
+        {
+          "name": "Kit Trufado",
+          "priceCents": 11500,
+          "description": "Inclui: Bolo trufado, 100 salgados, 1 refri 2L."
+        },
+        {
+          "name": "Kit Bolinho",
+          "priceCents": 13000,
+          "description": "Inclui: Bolo confeitado 10 fatias, 100 salgados, 1 refri 2L.",
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Kit PP",
+          "priceCents": 17500,
+          "description": "Inclui: Bolo PP, 100 salgados. R$ 5,00 de desconto no cento de salgado",
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Kit P",
+          "priceCents": 28000,
+          "description": "Inclui: Bolo confeitado P, 200 salgados, 1 refri 2L.",
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Kit M",
+          "priceCents": 40000,
+          "description": "Inclui: Bolo médio, 200 salgados, 50 doces, 10 cup cakes.",
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Kit M 2 Andares",
+          "priceCents": 55000,
+          "description": "Inclui: Bolo médio 2 andares, 200 salgados, 100 doces, 6 cup cakes.",
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bolos confeitados",
+      "description": "Do bolinho ao bolo de 4 andares. Esses extras têm valor adicional. Combine pelo WhatsApp o que você quer no seu bolo. (Glitter, Flores artificiais, Topo 3D, Cores metalizadas, Frutas, Doces)",
+      "products": [
+        {
+          "name": "Bolinhos",
+          "variants": [
+            {
+              "name": "Pinguinho (4 fatias)",
+              "priceCents": 3500
+            },
+            {
+              "name": "Bolinho (10 fatias)",
+              "priceCents": 7500
+            },
+            {
+              "name": "Mini (15 fatias)",
+              "priceCents": 10000
+            }
+          ],
+          "description": "O Pinguinho vem com 1 opção de recheio.",
+          "modifierGroups": [
+            "Recheio do Pinguinho",
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Bolo de 1 andar",
+          "variants": [
+            {
+              "name": "PP (20 fatias)",
+              "priceCents": 13000
+            },
+            {
+              "name": "P (30 fatias)",
+              "priceCents": 17500
+            },
+            {
+              "name": "Médio (40 fatias)",
+              "priceCents": 20000
+            },
+            {
+              "name": "Grande (50 fatias)",
+              "priceCents": 27000
+            },
+            {
+              "name": "GG (80 fatias)",
+              "priceCents": 33000
+            }
+          ],
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Bolo quadrado",
+          "variants": [
+            {
+              "name": "Quadrado (50 fatias)",
+              "priceCents": 28000
+            },
+            {
+              "name": "Quadradão (90 fatias)",
+              "priceCents": 38500
+            }
+          ],
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Bolo de 2 andares",
+          "variants": [
+            {
+              "name": "P (50 fatias)",
+              "priceCents": 28000
+            },
+            {
+              "name": "Médio (70 fatias)",
+              "priceCents": 34500
+            },
+            {
+              "name": "Grande (100 fatias)",
+              "priceCents": 39500
+            }
+          ],
+          "modifierGroups": [
+            "Extras para o bolo"
+          ]
+        },
+        {
+          "name": "Bolo de 3 e 4 andares",
+          "variants": [
+            {
+              "name": "P de 3 andares (65 fatias)",
+              "priceCents": 39000
+            },
+            {
+              "name": "G de 3 andares (120 fatias)",
+              "priceCents": 52000
+            },
+            {
+              "name": "4 andares (150 fatias)",
+              "priceCents": 65000
+            }
+          ],
+          "description": "Nos bolos de 3 andares já estão inclusos topo 3D, cores metalizadas, frutas e doces.",
+          "modifierGroups": [
+            "Extras para o bolo (3 e 4 andares)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bolos especiais",
+      "description": "Coberturas cremosas, morangos e bombons.",
+      "products": [
+        {
+          "name": "Bolo Trufado",
+          "variants": [
+            {
+              "name": "8 fatias",
+              "priceCents": 3500
+            },
+            {
+              "name": "12 fatias",
+              "priceCents": 6000
+            },
+            {
+              "name": "20 fatias",
+              "priceCents": 10000
+            }
+          ],
+          "description": "Cobertura trufada de ninho e chocolate, com morangos e chips.",
+          "imageFile": "qibuxo/public/img/especial-trufado.webp"
+        },
+        {
+          "name": "Bolo Vulcão",
+          "variants": [
+            {
+              "name": "8 fatias",
+              "priceCents": 3000
+            },
+            {
+              "name": "12 fatias",
+              "priceCents": 5000
+            },
+            {
+              "name": "20 fatias",
+              "priceCents": 8500
+            }
+          ],
+          "description": "Cobertura de chocolate e ninho escorrendo, com morango e chips.",
+          "imageFile": "qibuxo/public/img/especial-vulcao.webp"
+        },
+        {
+          "name": "Bolo Piscina",
+          "priceCents": 5000,
+          "description": "Topo aberto com chocolate e ninho, morango e chips. 12 fatias.",
+          "imageFile": "qibuxo/public/img/especial-piscina.webp"
+        },
+        {
+          "name": "Bolo Vulcão Supremo",
+          "variants": [
+            {
+              "name": "Tradicional (12 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "Chocolate (12 fatias)",
+              "priceCents": 7000
+            }
+          ],
+          "description": "Vulcão de ninho e chocolate com morangos e bombons de amendoim.",
+          "imageFile": "qibuxo/public/img/especial-vulcao-supremo.webp"
+        },
+        {
+          "name": "Bolo Paidegua",
+          "priceCents": 6500,
+          "description": "Massa de chocolate, creme de ninho e morangos. 12 fatias.",
+          "imageFile": "qibuxo/public/img/especial-paidegua.webp"
+        },
+        {
+          "name": "Bolo Africano",
+          "priceCents": 7000,
+          "description": "Massa de chocolate com morangos e bombons de amendoim. 12 fatias.",
+          "imageFile": "qibuxo/public/img/especial-africano.webp"
+        },
+        {
+          "name": "Bolo Amostrado",
+          "priceCents": 7500,
+          "description": "Listras de ninho e chocolate, morangos e bombons de amendoim. 12 fatias.",
+          "imageFile": "qibuxo/public/img/especial-amostrado.webp"
+        },
+        {
+          "name": "Bolo Arretado",
+          "priceCents": 7500,
+          "description": "Massa de chocolate coberta de brigadeiros de granulê e fio de chocolate. 12 fatias.",
+          "imageFile": "qibuxo/public/img/especial-arretado.webp"
+        }
+      ]
+    },
+    {
+      "name": "Bolos caseirinhos",
+      "description": "Do bolo mole ao de chocolate, para o dia a dia.",
+      "products": [
+        {
+          "name": "Bolo Mole",
+          "priceCents": 3000,
+          "imageFile": "qibuxo/public/img/caseiro-mole.webp"
+        },
+        {
+          "name": "Bolo de Milho",
+          "priceCents": 3000,
+          "imageFile": "qibuxo/public/img/caseiro-milho.webp"
+        },
+        {
+          "name": "Bolo Fofo",
+          "priceCents": 2000,
+          "imageFile": "qibuxo/public/img/caseiro-fofo.webp"
+        },
+        {
+          "name": "Bolo de Chocolate",
+          "priceCents": 2500,
+          "imageFile": "qibuxo/public/img/caseiro-chocolate.webp"
+        },
+        {
+          "name": "Bolo Formigueiro",
+          "priceCents": 2500,
+          "imageFile": "qibuxo/public/img/caseiro-formigueiro.webp"
+        },
+        {
+          "name": "Bolo Mesclado",
+          "priceCents": 2500,
+          "imageFile": "qibuxo/public/img/caseiro-mesclado.webp"
+        },
+        {
+          "name": "Bolo Xiqui",
+          "priceCents": 4000,
+          "description": "Cobertura de ninho e calda de morango. 12 fatias.",
+          "imageFile": "qibuxo/public/img/caseiro-xiqui.webp"
+        },
+        {
+          "name": "Bolo Xodó",
+          "priceCents": 4000,
+          "description": "Cobertura de chocolate com granulê. 12 fatias.",
+          "imageFile": "qibuxo/public/img/caseiro-xodo.webp"
+        },
+        {
+          "name": "Bolo Fuxico",
+          "priceCents": 4500,
+          "description": "Cobertura de chocolate com amendoim picado. 12 fatias.",
+          "imageFile": "qibuxo/public/img/caseiro-fuxico.webp"
+        }
+      ]
+    },
+    {
+      "name": "Tortas",
+      "description": "Tortas de 10, 15 ou 20 fatias. As tortas não acompanham topo, tema, cores ou plaquinhas. Para bolo decorado, veja os Bolos confeitados.",
+      "products": [
+        {
+          "name": "Torta de Ninho",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 8500
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 12500
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-ninho.webp"
+        },
+        {
+          "name": "Torta de Abacaxi",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 9500
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 13000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-abacaxi.webp"
+        },
+        {
+          "name": "Torta de Maracujá",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 9500
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 13000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-maracuja.webp"
+        },
+        {
+          "name": "Torta de Ninho com Nutella",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 8000
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 10000
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 14000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-ninho-nutella.webp"
+        },
+        {
+          "name": "Torta Ferrero",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 7000
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 9000
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 13000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-ferrero.webp"
+        },
+        {
+          "name": "Torta de Ninho com Morango",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 8500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 12000
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 15000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-ninho-morango.webp"
+        },
+        {
+          "name": "Torta de Abacaxi com Coco",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 8500
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 12500
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-abacaxi-coco.webp"
+        },
+        {
+          "name": "Torta de Chocolate",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 8500
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 12500
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-chocolate.webp"
+        },
+        {
+          "name": "Torta Prestígio",
+          "variants": [
+            {
+              "name": "P (10 fatias)",
+              "priceCents": 6500
+            },
+            {
+              "name": "M (15 fatias)",
+              "priceCents": 8500
+            },
+            {
+              "name": "G (20 fatias)",
+              "priceCents": 12500
+            }
+          ],
+          "imageFile": "qibuxo/public/img/torta-prestigio.webp"
+        }
+      ]
+    },
+    {
+      "name": "Tortinhas",
+      "description": "Tortinhas de 10, 15 ou 20 fatias.",
+      "products": [
+        {
+          "name": "Tortinha de Chocolate",
+          "variants": [
+            {
+              "name": "Pequena (10 fatias)",
+              "priceCents": 5000
+            },
+            {
+              "name": "Média (15 fatias)",
+              "priceCents": 7000
+            },
+            {
+              "name": "Grande (20 fatias)",
+              "priceCents": 9000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/tortinha-chocolate.webp"
+        },
+        {
+          "name": "Tortinha de Ninho com Nutella",
+          "variants": [
+            {
+              "name": "Pequena (10 fatias)",
+              "priceCents": 5000
+            },
+            {
+              "name": "Média (15 fatias)",
+              "priceCents": 7000
+            },
+            {
+              "name": "Grande (20 fatias)",
+              "priceCents": 9000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/tortinha-ninho-nutella.webp"
+        },
+        {
+          "name": "Tortinha Ferrero",
+          "variants": [
+            {
+              "name": "Pequena (10 fatias)",
+              "priceCents": 5000
+            },
+            {
+              "name": "Média (15 fatias)",
+              "priceCents": 7000
+            },
+            {
+              "name": "Grande (20 fatias)",
+              "priceCents": 9000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/tortinha-ferrero.webp"
+        },
+        {
+          "name": "Tortinha de Ninho",
+          "variants": [
+            {
+              "name": "Pequena (10 fatias)",
+              "priceCents": 4500
+            },
+            {
+              "name": "Média (15 fatias)",
+              "priceCents": 6000
+            },
+            {
+              "name": "Grande (20 fatias)",
+              "priceCents": 8500
+            }
+          ],
+          "imageFile": "qibuxo/public/img/tortinha-ninho.webp"
+        }
+      ]
+    },
+    {
+      "name": "Doces tradicionais",
+      "description": "Todos os nossos doces são feitos com produtos de alta qualidade, e um toque muito especial de amor. Prestígio, brigadeiro, beijinho, ninho e casadinho. Escolha os sabores ao adicionar.",
+      "products": [
+        {
+          "name": "Doces tradicionais",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 3500
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 6500
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 12000
+            }
+          ],
+          "description": "Prestígio, brigadeiro, beijinho, ninho e casadinho.",
+          "imageFile": "qibuxo/public/img/doces-tradicionais.webp",
+          "modifierGroups": [
+            "Sabores (doces tradicionais)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Doces gourmet",
+      "description": "Mesmo preço para todos os sabores: 25 por R$ 50, 50 por R$ 100, 100 por R$ 200.",
+      "products": [
+        {
+          "name": "Brigadeiro de chocolate com granulê",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-brigadeiro-chocolate.webp"
+        },
+        {
+          "name": "Brigadeiro de ninho com granulê branco",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-brigadeiro-ninho.webp"
+        },
+        {
+          "name": "Ninho com Nutella",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-ninho-nutella.webp"
+        },
+        {
+          "name": "Ferrero Rocher",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-ferrero.webp"
+        },
+        {
+          "name": "Doces flores de leite ninho",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-flores.webp"
+        },
+        {
+          "name": "Morango com Nutella",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-morango-nutella.webp"
+        },
+        {
+          "name": "Oreo",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-oreo.webp"
+        },
+        {
+          "name": "Cappuccino",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-cappuccino.webp"
+        },
+        {
+          "name": "Churros com doce de leite",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-churros.webp"
+        },
+        {
+          "name": "Brownie com Nutella ou ninho",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-brownie.webp",
+          "modifierGroups": [
+            "Cobertura (brownie)"
+          ]
+        },
+        {
+          "name": "Casadinho de ninho com morango",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-casadinho-morango.webp"
+        },
+        {
+          "name": "Coco queimado",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 5000
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 10000
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 20000
+            }
+          ],
+          "imageFile": "qibuxo/public/img/gourmet-coco-queimado.webp"
+        }
+      ]
+    },
+    {
+      "name": "Salgados",
+      "description": "Coxinha, risole, bolinha de queijo, canudinho e pastel.",
+      "products": [
+        {
+          "name": "Salgados",
+          "variants": [
+            {
+              "name": "25 un.",
+              "priceCents": 1800
+            },
+            {
+              "name": "50 un.",
+              "priceCents": 2700
+            },
+            {
+              "name": "100 un.",
+              "priceCents": 5000
+            }
+          ],
+          "description": "Coxinha de frango, risole de calabresa e bolinha de queijo.",
+          "imageFile": "qibuxo/public/img/salgados-fritos.webp",
+          "modifierGroups": [
+            "Sabores (salgados)"
+          ]
+        },
+        {
+          "name": "Canudinho de frango",
+          "priceCents": 7500,
+          "description": "100 unidades.",
+          "imageFile": "qibuxo/public/img/salgado-canudinho.webp"
+        },
+        {
+          "name": "Pastéis de carne",
+          "priceCents": 6000,
+          "description": "100 unidades.",
+          "imageFile": "qibuxo/public/img/salgado-pastel.webp"
+        }
+      ]
+    },
+    {
+      "name": "Sobremesas",
+      "description": "Individuais, em pote, em fatia ou inteiras.",
+      "products": [
+        {
+          "name": "Dois Amores",
+          "priceCents": 1000,
+          "imageFile": "qibuxo/public/img/sobremesa-dois-amores.webp"
+        },
+        {
+          "name": "Brownie",
+          "priceCents": 700,
+          "imageFile": "qibuxo/public/img/sobremesa-brownie.webp"
+        },
+        {
+          "name": "Bolo de pote",
+          "variants": [
+            {
+              "name": "Ninho",
+              "priceCents": 1200
+            },
+            {
+              "name": "Chocolate",
+              "priceCents": 1200
+            },
+            {
+              "name": "Red velvet",
+              "priceCents": 1200
+            },
+            {
+              "name": "Floresta negra",
+              "priceCents": 1200
+            }
+          ],
+          "imageFile": "qibuxo/public/img/sobremesa-bolo-pote.webp"
+        },
+        {
+          "name": "Cone trufado",
+          "priceCents": 1000,
+          "description": "Ver opções do dia.",
+          "imageFile": "qibuxo/public/img/sobremesa-cone-trufado.webp",
+          "modifierGroups": [
+            "Sabor (cone trufado)"
+          ]
+        },
+        {
+          "name": "Fatia ninho com Nutella",
+          "priceCents": 1700,
+          "imageFile": "qibuxo/public/img/sobremesa-fatia-ninho-nutella.webp"
+        },
+        {
+          "name": "Fatia prestígio",
+          "priceCents": 1500,
+          "imageFile": "qibuxo/public/img/sobremesa-fatia-prestigio.webp"
+        },
+        {
+          "name": "Fatia Ferrero",
+          "priceCents": 1500,
+          "imageFile": "qibuxo/public/img/sobremesa-fatia-ferrero.webp"
+        },
+        {
+          "name": "Pudim médio",
+          "priceCents": 3500,
+          "description": "8 fatias.",
+          "imageFile": "qibuxo/public/img/sobremesa-pudim-medio.webp"
+        },
+        {
+          "name": "Pudim grande",
+          "priceCents": 7000,
+          "description": "12 a 15 fatias.",
+          "imageFile": "qibuxo/public/img/sobremesa-pudim-grande.webp"
+        },
+        {
+          "name": "Bandeja de doces",
+          "priceCents": 2500,
+          "description": "Ver opções do dia.",
+          "imageFile": "qibuxo/public/img/sobremesa-bandeja-doces.webp"
+        },
+        {
+          "name": "Caixa mocinha com doces",
+          "priceCents": 200,
+          "description": "Ver opções do dia.",
+          "imageFile": "qibuxo/public/img/sobremesa-caixa-mocinha.webp"
+        }
+      ]
+    }
+  ]
+}

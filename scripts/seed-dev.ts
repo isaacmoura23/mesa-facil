@@ -112,7 +112,37 @@ async function cleanupLeftovers(admin: Admin): Promise<void> {
   must(await admin.from("delivery_zones").delete().in("restaurant_id", demoIds).like("name", `${EPHEMERAL_PREFIX}%`), "cleanup zones");
   must(await admin.from("business_hour_exceptions").delete().in("restaurant_id", demoIds).like("description", `${EPHEMERAL_PREFIX}%`), "cleanup hour exceptions");
   must(await admin.from("business_hours").delete().in("restaurant_id", demoIds).eq("opens_at", "03:33:00"), "cleanup hours");
-  must(await admin.from("support_sessions").update({ ended_at: new Date().toISOString() }).in("restaurant_id", demoIds).is("ended_at", null), "close stale support sessions");
+  // Fase 6: sessões de suporte ativas (de testes ou da UI) são encerradas via service role, em qualquer restaurante.
+  must(await admin.from("support_sessions").update({ ended_at: new Date().toISOString() }).is("ended_at", null), "close stale support sessions");
+  await cleanupPlatform(admin);
+}
+
+/**
+ * Fase 6: estado base da plataforma. `audit_logs` é imutável (as linhas `platform.*` de testes ficam).
+ * Restaurantes `zz-*` e donos de teste já saíram acima; aqui saem tickets `zz-*`, planos `zz-*`/`plano-zz*`
+ * (e as assinaturas que os usam) e as configurações voltam ao padrão. As assinaturas dos DEMO são refeitas em seedRestaurantData.
+ */
+async function cleanupPlatform(admin: Admin): Promise<void> {
+  must(await admin.from("support_tickets").delete().like("subject", `${EPHEMERAL_PREFIX}%`), "cleanup tickets");
+  for (const pattern of [`${EPHEMERAL_PREFIX}%`, "plano-zz%"]) {
+    const stale = (must(await admin.from("plans").select("id").like("code", pattern), "list test plans") as Row[]).map((p) => p.id as string);
+    if (stale.length) {
+      must(await admin.from("subscriptions").delete().in("plan_id", stale), "drop subscriptions of test plans");
+      must(await admin.from("plans").delete().in("id", stale), "drop test plans");
+    }
+  }
+  must(await admin.from("plans").update({ is_active: true }).eq("code", "basico"), "restore plano basico");
+  must(await admin.from("platform_settings").delete().not("key", "in", "(registration_enabled,default_trial_days)"), "drop extra settings");
+  must(
+    await admin.from("platform_settings").upsert(
+      [
+        { key: "registration_enabled", value: true },
+        { key: "default_trial_days", value: 14 },
+      ],
+      { onConflict: "key" },
+    ),
+    "restore platform settings",
+  );
 }
 
 /** Apaga (recursivamente) os objetos de um prefixo do Storage: logos/imagens de teste ou de UI nos restaurantes DEMO. */
@@ -413,13 +443,12 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
     );
   }
 
-  // Assinatura de teste (trial) se houver plano
-  const live = must(await admin.from("subscriptions").select("id").eq("restaurant_id", rid).in("status", ["trialing", "active", "past_due"]).limit(1), "subs");
-  if (!live.length) {
-    const plan = must(await admin.from("plans").select("id").eq("code", "basico").maybeSingle(), "plan");
-    if (plan) {
-      must(await admin.from("subscriptions").insert({ restaurant_id: rid, plan_id: plan.id, status: "trialing", trial_ends_at: new Date(Date.now() + 14 * 864e5).toISOString() }), "subscription");
-    }
+  // Assinatura base (Fase 6): Básico em trial, sempre. Testes da plataforma trocam plano/estado e criam histórico.
+  must(await admin.from("subscriptions").delete().eq("restaurant_id", rid), "reset subscriptions");
+  const plan = must(await admin.from("plans").select("id").eq("code", "basico").maybeSingle(), "plan");
+  if (plan) {
+    const end = new Date(Date.now() + 14 * 864e5).toISOString();
+    must(await admin.from("subscriptions").insert({ restaurant_id: rid, plan_id: plan.id, status: "trialing", trial_ends_at: end, current_period_end: end }), "subscription");
   }
 
   return {

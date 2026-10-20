@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
- * Importa, para o Supabase LOCAL, os dois restaurantes-piloto do dono da plataforma:
+ * Importa, para o Supabase LOCAL, os restaurantes-piloto do dono da plataforma:
  *   - La Pastelaria                      (https://la-pastelaria.vercel.app)  slug `la-pastelaria`
  *   - Pastelaria e Pizzaria O Nailton    (https://onailton.vercel.app)       slug `o-nailton`
+ *   - Qi Buxo (confeitaria)              (https://qibuxo-catalogo.vercel.app) slug `qibuxo`
  *
  *   npx tsx scripts/import-restaurants.ts [opções]
  *
  * Opções
  *   --dry-run            valida e resume os dados; não conecta no banco
  *   --reset              apaga e recria SÓ estes dois restaurantes (e seus arquivos no Storage); as contas locais ficam
- *   --only=<slug>        importa apenas um (la-pastelaria | o-nailton)
+ *   --only=<slug>        importa apenas um (la-pastelaria | o-nailton | qibuxo)
  *   --create-only        só cria o que falta; nunca atualiza o que já existe
  *   --prune              desativa (is_active=false) itens do restaurante que não estão nos dados
  *   --src-root=<dir>     raiz das pastas irmãs com imagens (padrão: pasta acima do projeto)
@@ -40,7 +41,7 @@ import { countData, validateImportData, type ImportData } from "./lib/import-typ
 import { verifyRestaurant } from "./lib/import-verify";
 import { projectRoot } from "./lib/env";
 
-const DATA_FILES = ["la-pastelaria.json", "o-nailton.json"];
+const DATA_FILES = ["la-pastelaria.json", "o-nailton.json", "qibuxo.json"];
 
 interface Args {
   dryRun: boolean;

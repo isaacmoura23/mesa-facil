@@ -92,7 +92,8 @@ describe.skipIf(!dockerAvailable)("catálogo do Postgres (default-deny)", () => 
     // Fase 2: public_menu e validate_cart são públicas POR DESIGN (leitura/precificação sem gravar nada).
     // Etapa 2.5 (mig. 0113): storefront_origins(slug) alimenta o CORS da API pública (devolve só as origens de restaurante ativo).
     // Fase 3 (mig. 0115): track_order (acompanhamento por código público de 80 bits, sem PII) também é pública por desenho.
-    expect(anonExec).toEqual(["public_menu", "resolve_restaurant_by_slug", "restaurant_is_public", "storefront_origins", "track_order", "validate_cart"]);
+    // Fase 6 (mig. 0128): public_platform_flags() devolve só {registration_enabled} (aviso de cadastro desativado).
+    expect(anonExec).toEqual(["public_menu", "public_platform_flags", "resolve_restaurant_by_slug", "restaurant_is_public", "storefront_origins", "track_order", "validate_cart"]);
   });
 
   it("Fase 3 (migs. 0114-0116): EXECUTE por papel — create_public_order só service_role; transition_order_status/request_print/mark_print_job só authenticated; track_order anon+authenticated", () => {
@@ -113,6 +114,18 @@ describe.skipIf(!dockerAvailable)("catálogo do Postgres (default-deny)", () => 
       psql("select string_agg(privilege_type, ',' order by privilege_type) from information_schema.role_table_grants where grantee='authenticated' and table_schema='public' and table_name='print_jobs'"),
     ).toEqual(["SELECT"]);
     expect(psql("select count(*) from pg_policies where schemaname='public' and tablename='print_jobs' and cmd in ('INSERT','UPDATE','DELETE')")).toEqual(["0"]);
+  });
+
+  it("Fase 6 (migs. 0128-0130): TODA platform_* é SECURITY DEFINER e executável só por authenticated (anon/PUBLIC não); public_platform_flags anon+authenticated; app_private.* da Fase 6 não chamável", () => {
+    const fns = psql("select p.oid::regprocedure::text||'|'||p.prosecdef||'|'||has_function_privilege('anon',p.oid,'execute')||'|'||has_function_privilege('authenticated',p.oid,'execute')||'|'||has_function_privilege('public',p.oid,'execute') from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname like 'platform\_%' order by 1")!;
+    // 10 de leitura (0129) + 6 de escrita (0130)
+    expect(fns.length).toBe(16);
+    for (const line of fns) expect(line, line).toMatch(/|true|false|true|false$/);
+    expect(psql("select has_function_privilege('anon','public.public_platform_flags()','execute')||'|'||has_function_privilege('authenticated','public.public_platform_flags()','execute')||'|'||has_function_privilege('public','public.public_platform_flags()','execute')")).toEqual(["true|true|false"]);
+    const priv = psql("select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='app_private' and p.proname in ('require_platform','sub_status_in','sub_status_out','platform_setting','create_trial_subscription','platform_audit_metadata') and (has_function_privilege('anon',p.oid,'execute') or has_function_privilege('authenticated',p.oid,'execute') or has_function_privilege('public',p.oid,'execute'))");
+    expect(priv).toEqual([]);
+    const have = psql("select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='app_private' and p.proname in ('require_platform','sub_status_in','sub_status_out','platform_setting','create_trial_subscription','platform_audit_metadata')");
+    expect(have).toEqual(["6"]);
   });
 
   it("reorder_menu: authenticated executa, anon e PUBLIC não", () => {

@@ -231,3 +231,39 @@ nenhuma ação operacional. Relatórios/dashboard exigem `reports.view`; equipe 
 - **Leva 1** — DB-7: `supabase/migrations/20260101000124+`. TEAM: `src/app/app/[slug]/equipe/**`, `src/modules/team/**`, `src/components/team/**`. SETTINGS: `src/app/app/[slug]/{restaurante,configuracoes}/**`, `src/modules/restaurant-profile/**` (existe), `src/modules/restaurant-settings/**`, `src/components/restaurant-profile/**` (existe), `src/components/restaurant-settings/**`.
 - **Leva 2** — DASH: `src/app/app/[slug]/{dashboard,pedidos}/**`, `src/modules/dashboard/**`, `src/components/dashboard/**`. REPCUST: `src/app/app/[slug]/{relatorios,clientes}/**`, `src/modules/reports/**`, `src/modules/customers/**`, `src/components/reports/**`, `src/components/customers/**`.
 - **TESTS5**: `tests/**`, `scripts/**`.
+
+---
+
+# Fase 6 — Painel da plataforma (contrato)
+
+Quem usa: `platform_admins.role` = `superadmin` (tudo) ou `support` (somente leitura + tickets + sessões de suporte). Regra central: a plataforma
+**não vê dados operacionais/pessoais dos restaurantes por padrão** — só metadados e agregados (contagens, valores somados, status). Acesso a dados de um
+restaurante só por **sessão de suporte** (justificativa ≥ 10 caracteres, ≤ 60 min, somente leitura, auditada, visível ao restaurante).
+Cobrança é MANUAL (sem provedor online); assinaturas são registros administrados pelo superadmin.
+
+## RPCs (DB-8, migrações `20260101000128+`; SECURITY DEFINER, `search_path=''`, authenticated; `is_platform_admin()`/`is_platform_superadmin()` DENTRO; erros `CODIGO: texto`; usuário comum/dono/restaurante → `FORBIDDEN`)
+
+Leitura (superadmin e support): 
+- `platform_dashboard()` → `{restaurants:{total,pending,active,suspended,new_30d}, subscriptions:{active,trial,past_due,cancelled}, mrr_cents (soma do preço do plano das assinaturas ativas), orders_30d (contagem agregada), tickets_open, support_sessions_active}` — só agregados.
+- `platform_list_restaurants(p_search, p_status, p_cursor jsonb, p_limit int)` → `{rows:[{id,slug,name,status,created_at,plan_name,subscription_status,members_count,owner_name,owner_email}], next_cursor}` (keyset; busca nome/slug escapando `%_\`); sem pedidos/clientes.
+- `platform_get_restaurant(p_restaurant)` → metadados + assinatura + equipe (papel/status, sem telefone) + últimas 20 entradas de auditoria do restaurante (sem metadata sensível).
+- `platform_list_subscriptions(p_status, p_cursor, p_limit)`, `platform_list_support_sessions(p_active_only, p_cursor, p_limit)`, `platform_list_tickets(p_status, p_cursor, p_limit)`, `platform_list_audit_logs(p_actor, p_action_prefix, p_restaurant, p_from, p_to, p_cursor, p_limit)` (**superadmin**; metadata sanitizado como `list_audit_logs`), `platform_get_settings()`.
+- `platform_support_overview(p_session uuid)` — exige sessão de suporte ATIVA do próprio `auth.uid()`; devolve visão somente leitura do restaurante: dados do restaurante, cardápio (contagens), configurações públicas, equipe (papel/status), últimos 50 pedidos (número, status, modalidade, total, data — SEM nome/telefone/endereço do cliente) e comandas abertas (rótulo, total); grava `audit_logs` `support.overview_viewed`.
+
+Escrita (superadmin, exceto onde dito):
+- `platform_create_restaurant(p_name, p_slug, p_owner_email)` (dono precisa ter conta; senão `OWNER_NOT_FOUND`), cria restaurante `active` + vínculo owner + assinatura trial do plano padrão; auditoria.
+- `platform_set_restaurant_status(p_restaurant, p_status in ('active','suspended'), p_reason)` — motivo ≥ 10 chars ao suspender; auditoria; restaurante suspenso perde acesso (já garantido por `is_member`).
+- `platform_upsert_plan(p_id, p_code, p_name, p_price_cents, p_limits jsonb, p_features jsonb, p_is_active)` (validar chaves de `limits`: max_members, max_tables, max_products inteiros ≥ 0 ou null; sem apagar plano em uso: só inativar), `platform_set_subscription(p_restaurant, p_plan, p_status in ('trial','active','past_due','cancelled'), p_period_end, p_note)`.
+- Suporte (`superadmin` e `support`): `open_support_session` e `close_support_session` (existem), `platform_update_ticket(p_ticket, p_status, p_note)`.
+- `platform_set_setting(p_key, p_value jsonb)` em nova tabela `platform_settings(key pk, value jsonb, updated_by, updated_at)` com chaves permitidas: `registration_enabled` (bool; quando false, `register_restaurant` falha com `REGISTRATION_DISABLED`), `default_trial_days` (int 0–365), `support_email` (texto ≤ 200), `maintenance_message` (texto ≤ 300 ou null). Leitura pública só de `registration_enabled` via função `public_platform_flags()` (anon) para o app mostrar aviso.
+
+## UI (`src/app/platform/**`; shell e `requirePlatformAdmin` já existem; `support` não vê ações de escrita de plataforma)
+
+- **PLAT-A:** `/platform/dashboard`, `/platform/restaurants` (lista, busca, filtros, criar restaurante) e `/platform/restaurants/[id]` (metadados, assinatura, equipe, auditoria; suspender/reativar com motivo; botão "Abrir sessão de suporte" com justificativa).
+- **PLAT-B:** `/platform/plans`, `/platform/subscriptions`, `/platform/support` (tickets, sessões ativas/histórico, ver visão de suporte somente leitura via `platform_support_overview` em `/platform/support/[sessionId]`, encerrar sessão), `/platform/audit-logs`, `/platform/settings`.
+
+## Divisão
+- **DB-8**: `supabase/migrations/20260101000128+`.
+- **PLAT-A**: `src/app/platform/{dashboard,restaurants}/**`, `src/modules/platform-restaurants/**`, `src/components/platform-restaurants/**`.
+- **PLAT-B**: `src/app/platform/{plans,subscriptions,support,audit-logs,settings}/**`, `src/modules/platform-admin/**`, `src/components/platform-admin/**`.
+- **TESTS6** (por último): `tests/**`, `scripts/seed-dev.ts`.

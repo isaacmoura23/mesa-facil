@@ -193,3 +193,30 @@ Origem: `tests/rls/23`, `24`, `25` (migs. 0124-0127, só clientes autenticados r
 - **Horários salvos por diff, não atômico**: a tela grava a grade comparando com o estado atual (insere/atualiza/apaga linha a linha). Os triggers (limite de 6 faixas/dia, sobreposição) valem a cada linha sob lock advisory; uma falha no meio deixa a grade parcialmente aplicada. Sem teste de UI aqui; o banco foi testado sob concorrência (10 inserções => exatamente 6).
 - Relatórios: janela `[from,to)`, semana ISO (bucket pode começar antes de `from`), 366 dias de relógio = 367 datas locais em SP; `gross` exclui CANCELLED/REJECTED; ticket médio sobre gross; `payment_methods` só PAID por `paid_at`; motivos de cancelamento mascarados (e-mail, >= 6 dígitos), fórmula `=cmd` NÃO é alterada no banco (o CSV do app a neutraliza). Truncamento: 5000 linhas exatas => `truncated=false`; 5001 => true com totais completos.
 - `audit_logs` é append-only: as linhas de teste (restaurante efêmero) ficam no banco.
+
+
+---
+
+# Achados da Fase 6 (painel da plataforma)
+
+Origem: `tests/rls/26-platform-rpcs` (migs. 0128-0130, só clientes autenticados reais: superadmin, support, dono, gerente, caixa, cozinha, garçom, sem vínculo, anon), `rls/14` (EXECUTE de todas as `platform_*`, `public_platform_flags`, `app_private.*`) e `unit/platform-restaurants`, `unit/platform-admin`. **Nenhuma falha de isolamento, escalonamento de papel, vazamento de dado de cliente/PII, nota interna visível ao restaurante, mais de uma assinatura vigente ou suspensão duplicada foi encontrada nas migrações 0128-0130.**
+
+| # | Sev. | Tema | Onde | Teste |
+|---|---|---|---|---|
+| F-50 | Baixa | O superadmin ainda apaga um plano SEM assinaturas por `DELETE` REST direto em `plans` (policy de superadmin da mig. 0012), sem auditoria; o contrato diz "nunca apagar, só inativar". Plano com assinatura é protegido pela FK (23503). Correção: revogar DELETE de `plans` (e a policy) ou exigir RPC | RLS `plans` | `26` (documentado; plano em uso => 23503) |
+| F-51 | Baixa | `errors.ts` mapeia `NOT_AUTHENTICATED`, mas o banco emite `UNAUTHENTICATED` (28000): sessão expirada aparece como erro genérico. Correção: trocar a chave (ou aceitar as duas) | `platform-admin/errors.ts` | `unit/platform-admin` `it.fails` |
+| F-52 | Média | `describePlatformAudit` lê `metadata.status`/`.to`, mas o banco grava `status_from`/`status_to` (e `plan_from`/`plan_to`): na auditoria da plataforma toda mudança de assinatura/restaurante sai como "outro estado". (`platform-restaurants/labels.ts` já usa `status_to`.) Correção: ler `m.status_to ?? m.status ?? m.to` | `platform-admin/audit-text.ts` | `unit/platform-admin` `it.fails` x2 |
+| F-53 | Info | O app não conhece os slugs reservados (`admin`, `platform`, `support`...): o schema aceita e o banco recusa com `INVALID_SLUG` (mensagem do app já cobre "reservado") | `platform-restaurants/schemas.ts` | `unit/platform-restaurants` (documentado) |
+| F-54 | Info | `default_trial_days = 0` cria o trial já vencido e sem `current_period_end`; `support_email` não é validado como e-mail no banco (só tamanho, como no contrato); o app valida | mig. 0128/0130 | `26` (documentado) |
+
+## Detalhes e correções sugeridas
+- **F-50** Repro: superadmin `from('plans').delete().eq('id', <plano sem assinaturas>)` => 1 linha apagada (já visto no teste `02`).
+- **F-52** Repro: `describePlatformAudit('platform.subscription_changed', {status_from:'trial', status_to:'active'}).text` => `"Alterou uma assinatura (outro estado)"`.
+
+## Decisões e comportamentos verificados (não são bugs)
+- **Rótulos de comanda** (`tabs.label`, texto livre da equipe) aparecem em `platform_support_overview` e podem conter nomes de pessoas; contrato manda incluí-los. Nada mais de cliente sai (nome, telefone, e-mail, endereço, observações, motivo de cancelamento).
+- **Notas internas** (`p_note` de assinatura/chamado) vão só para `audit_logs` com `restaurant_id` NULL (`platform.subscription_note`/`platform.ticket_note`): legíveis por `platform_list_audit_logs` (superadmin) e pelo REST de superadmin; o dono/equipe do restaurante e o `support` não as leem. A linha `platform.subscription_changed`/`ticket_updated` (com restaurante) NÃO contém a nota.
+- `platform_list_audit_logs` só aplica `sanitize_audit_metadata` (segredos); e-mail/telefone/endereço em metadata só são removidos em `platform_get_restaurant`. Superadmin-only por contrato.
+- `support` recebe `FORBIDDEN: acesso restrito à plataforma` idêntico ao de qualquer não-admin em todas as escritas e em `platform_list_audit_logs`; anon recebe 42501 (sem EXECUTE).
+- `period_end` no passado é sempre recusado (`INVALID_PERIOD`); `cancelled` ignora `p_period_end`; reativar após cancelar cria nova linha (histórico preservado).
+- Sessão de suporte: ausente, de outro admin, expirada ou encerrada => `SUPPORT_SESSION_INVALID` idêntico; a visão grava `support.overview_viewed` (visível ao dono). Com sessão ativa o superadmin também lê as tabelas por RLS (`has_support_access`), sem sessão não lê nada.
