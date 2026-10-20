@@ -56,3 +56,6 @@ scripts/data/.deploy-credentials.json
 
 # credenciais de donos importados na nuvem (nunca versionar)
 scripts/data/.cloud-owner-credentials.json
+
+# pasta criada por engano por um clone (cd ~ literal)
+~/
