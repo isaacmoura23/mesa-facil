@@ -1,6 +1,6 @@
 # Mesa Fácil (nome provisório) — estrutura do SaaS e planejamento
 
-Atualizado em 2026-10-16. Estado: Fases 1–4 concluídas e commitadas; Fase 5 em andamento.
+Atualizado em 2026-10-21. Estado: as 7 fases estão concluídas; ver `docs/RELATORIO-FINAL.md`.
 
 ## 1. Visão geral
 
@@ -37,7 +37,7 @@ Permissões granulares (`orders.*`, `menu.manage`, `tables.*`, `tabs.*`, `paymen
 `restaurant.settings.manage`) em `role_permissions` + overrides por membro. **O dono nunca recebe permissão operacional**: monitora em leitura;
 a equipe opera. Superadmin só acessa dados de um restaurante via sessão de suporte justificada (temporária, somente leitura, auditada).
 
-## 4. Banco (Supabase local, 37 migrações, 35 tabelas, 53 funções DEFINER)
+## 4. Banco (Supabase local, 44 migrações, 35 tabelas, 53 funções DEFINER)
 
 - Identidade/tenancy: `profiles`, `restaurants`, `restaurant_memberships`, `platform_admins`, `permissions`, `role_permissions`, `membership_permission_overrides`,
   `audit_logs` (imutável), `plans`, `subscriptions`, `support_sessions`, `support_tickets`.
@@ -79,9 +79,9 @@ Achados de segurança e consistência documentados em `tests/FINDINGS.md` (bugs 
 | 2 + 2.5 | Cardápio, vitrine, API pública + SDK, variantes, importação dos pilotos | concluída |
 | 3 | Pedidos reais, tempo real, cozinha, histórico, impressão | concluída |
 | 4 | Mesas, comandas, pagamento manual, conta, fechamento | concluída |
-| 5 | Dashboard, monitoramento, clientes, relatórios (CSV), equipe, configurações | em andamento (leva 1: banco, equipe, configurações; leva 2: dashboard, relatórios, clientes) |
-| 6 | Plataforma: restaurantes, planos/assinaturas, suporte (sessão justificada), auditoria, configurações globais | pendente |
-| 7 | Validação final: E2E de ponta a ponta (3 modalidades), responsividade, segurança, README/instalação, relatório | pendente |
+| 5 | Dashboard, monitoramento, clientes, relatórios (CSV), equipe, configurações | concluída |
+| 6 | Plataforma: restaurantes, planos/assinaturas, suporte (sessão justificada), auditoria, configurações globais | concluída |
+| 7 | Validação final: E2E de ponta a ponta (3 modalidades), responsividade, segurança, README/instalação, relatório | concluída |
 | Backlog | corrigir bugs menores; confirmação de e-mail em produção; limite de requisições compartilhado (Upstash/KV); impressão silenciosa (integração local); divisão de conta e taxa de serviço; pagamento online; deploy na nuvem (Supabase + Vercel); recuperação de senha | a decidir |
 
 ## 9. Limitações conhecidas

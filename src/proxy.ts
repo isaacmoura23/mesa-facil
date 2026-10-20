@@ -14,6 +14,6 @@ export const config = {
   matcher: [
     // Ignora arquivos estáticos, otimização de imagens, metadados e a API pública
     // (sem sessão; evita latência extra de renovação de cookies nas vitrines).
-    "/((?!api/public|_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|woff2?)$).*)",
+    "/((?!api/public|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|woff2?)$).*)",
   ],
 };

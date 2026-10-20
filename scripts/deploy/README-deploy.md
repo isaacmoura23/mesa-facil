@@ -33,7 +33,7 @@ Nunca cole esses valores em chats, prints ou commits.
 
 ```
 npx tsx scripts/deploy/apply-migrations.ts --dry-run     # varredura de privilégios + checagens, NÃO grava
-npx tsx scripts/deploy/apply-migrations.ts               # aplica as 41 migrações + seed de planos e roda as checagens de segurança
+npx tsx scripts/deploy/apply-migrations.ts               # aplica as 44 migrações + seed de planos e roda as checagens de segurança
 npx tsx scripts/deploy/seed-demo-remote.ts               # importa La Pastelaria e O Nailton, cria contas de demo, mesas
 ```
 
