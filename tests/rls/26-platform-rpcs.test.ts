@@ -135,7 +135,7 @@ let R4: { id: string; slug: string };
 let R5: { id: string; slug: string };
 let planM: { id: string; code: string };
 let planY: { id: string; code: string };
-let tickets: Record<string, { id: string; subject: string }> = {};
+const tickets: Record<string, { id: string; subject: string }> = {};
 let before: any;
 let expectedN30 = 0;
 

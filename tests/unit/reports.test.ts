@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it } from "vitest";
 import { DEFAULT_REPORT, REPORTS, REPORT_GROUPS, REPORT_KEYS, isReportGroup, isReportKey } from "@/modules/reports/catalog";
 import { buildReportCsv, centsToCsv, csvText } from "@/modules/reports/csv";

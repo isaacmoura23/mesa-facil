@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 /**
  * Fase 3, vitrine padrão: src/modules/storefront/order-checkout.ts (pagamento declarado, chave de idempotência por tentativa,
  * pedidos recentes) e order-status.ts (textos do acompanhamento). Módulos puros; sessionStorage/localStorage são simulados.

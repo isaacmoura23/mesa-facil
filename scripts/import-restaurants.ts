@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 /**
  * Importa, para o Supabase LOCAL, os restaurantes-piloto do dono da plataforma:
  *   - La Pastelaria                      (https://la-pastelaria.vercel.app)  slug `la-pastelaria`
