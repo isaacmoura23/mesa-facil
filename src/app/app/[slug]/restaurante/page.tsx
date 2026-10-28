@@ -6,6 +6,7 @@ import { ApiInfo } from "@/components/restaurant-profile/api-info";
 import { EstablishmentForm } from "@/components/restaurant-profile/establishment-form";
 import { ContactForm } from "@/components/restaurant-profile/contact-form";
 import { OriginsEditor } from "@/components/restaurant-profile/origins-editor";
+import { PlanUsageCard } from "@/components/restaurant-profile/plan-usage-card";
 import { Alert } from "@/components/ui/alert";
 import { buttonStyles } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -60,6 +61,8 @@ export default async function Page({ params }: PageProps<"/app/[slug]/restaurant
       />
 
       <div className="flex max-w-3xl flex-col gap-6">
+        <PlanUsageCard restaurantId={restaurant.restaurant_id} />
+
         {profile.establishment ? (
           <EstablishmentForm
             slug={restaurant.slug}

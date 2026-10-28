@@ -3,7 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { getPublicEnvStatus } from "@/lib/env";
-import { GENERIC_ERROR_MESSAGE, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
+import { verifyImageBytes } from "@/modules/menu/image-verify";
+import { GENERIC_ERROR_MESSAGE, planErrorMessage, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { PUBLIC_BUCKET } from "@/lib/storage";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/modules/menu/image";
@@ -80,6 +81,8 @@ function checkViolationMessage(message: string | undefined): string {
 
 /** Converte erros do banco em mensagens PT-BR. Mensagens cruas nunca saem daqui. */
 function failure(error: DbError, fallback: string = GENERIC_ERROR_MESSAGE): Failure {
+  const planMessage = planErrorMessage(error);
+  if (planMessage) return { ok: false, message: planMessage };
   const code = error?.code;
   if (code === "42501") return { ok: false, message: RPC_ERROR_MESSAGES.forbidden };
   if (code === "PGRST301" || code === "PGRST303") {
@@ -193,7 +196,8 @@ async function verifyUploadedLogo(ctx: Context, path: string): Promise<string | 
     await ctx.supabase.storage.from(PUBLIC_BUCKET).remove([path]);
     return "A logo enviada não atende aos requisitos (JPG, PNG, WebP ou AVIF, até 5 MB).";
   }
-  return null;
+  // F-17: o tipo declarado não basta; confere os bytes reais (apaga o arquivo se for HTML/SVG disfarçado).
+  return verifyImageBytes(ctx.supabase, path, "logo");
 }
 
 /**

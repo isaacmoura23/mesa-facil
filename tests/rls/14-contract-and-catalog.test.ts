@@ -269,12 +269,18 @@ describe("endurecimento (achados em tests/FINDINGS.md)", () => {
         expectDenied(await as(who).from("restaurant_tables").insert({ restaurant_id: A().id, name: `zz-qr-${who}`, qr_token: forgedToken }).select("id"), /42501|permission denied/i);
         expect(rows(await admin().from("restaurant_tables").select("id").eq("qr_token", forgedToken))).toHaveLength(0);
       }
-      // cadastro legítimo: o token nasce no servidor, é único e o cliente consegue lê-lo (tables.view)
-      const created = await as("ownerA").from("restaurant_tables").insert({ restaurant_id: A().id, name: `zz-qr-ok-${Date.now()}` }).select("id,qr_token").single();
+      // cadastro legítimo: o token nasce no servidor; S-08: o cliente NÃO pode ler a coluna (INSERT ... RETURNING qr_token => 42501)
+      const name = `zz-qr-ok-${Date.now()}`;
+      expectDenied(await as("ownerA").from("restaurant_tables").insert({ restaurant_id: A().id, name: `${name}-x` }).select("id,qr_token"), /42501|permission denied/i);
+      await admin().from("restaurant_tables").delete().eq("name", `${name}-x`); // o INSERT é revertido na mesma instrução; limpeza defensiva
+      const created = await as("ownerA").from("restaurant_tables").insert({ restaurant_id: A().id, name }).select("id").single();
       expectOk(created);
       mine.push(created.data!.id);
-      expect(created.data!.qr_token).toMatch(/^[A-Za-z0-9_-]{8,}$/);
-      const token = created.data!.qr_token as string;
+      // quem tem tables.manage lê o token por list_table_qr_tokens
+      const listed = await as("ownerA").rpc("list_table_qr_tokens", { p_restaurant: A().id });
+      expectOk(listed);
+      const token = ((listed.data as { id: string; qr_token: string }[]).find((t) => t.id === created.data!.id) ?? { qr_token: "" }).qr_token;
+      expect(token).toMatch(/^[A-Za-z0-9_-]{8,}$/);
       // UPDATE do token negado; UPDATE de cadastro mantém o token
       expectDenied(await as("ownerA").from("restaurant_tables").update({ qr_token: "ZZFORJADOUPDATE" }).eq("id", created.data!.id).select("id"), /42501|permission denied/i);
       expectDenied(await as("managerA").from("restaurant_tables").update({ qr_token: token }).eq("id", A().tableIds[0]).select("id"), /42501|permission denied/i);
@@ -348,5 +354,51 @@ describe.skipIf(!dockerAvailable)("Fase 4: grants por coluna e EXECUTE das RPCs 
     const args = { p_restaurant_id: A().id, p_fulfillment: "DINE_IN", p_items: [], p_delivery_zone_id: null, p_staff: true };
     expect((await as("managerA").rpc("price_cart_core", args)).error, "price_cart_core acessível pelo cliente").not.toBeNull();
     expect((await anon().rpc("price_cart_core", args)).error).not.toBeNull();
+  });
+});
+
+describe.skipIf(!dockerAvailable)("Fase 8 (migs. 0131-0133): EXECUTE das RPCs novas, SELECT por coluna de restaurant_tables (S-08), funções internas", () => {
+  const priv = (sig: string) =>
+    psql(
+      `select has_function_privilege('anon','${sig}','execute')||'|'||has_function_privilege('authenticated','${sig}','execute')||'|'||has_function_privilege('public','${sig}','execute')||'|'||has_function_privilege('service_role','${sig}','execute')`,
+    )?.map((l) => l.replace(/true/g, "t").replace(/false/g, "f"));
+
+  it("restaurant_subscription_status, save_business_hours e list_table_qr_tokens: só authenticated (+service_role); SECURITY DEFINER com search_path vazio", () => {
+    for (const sig of ["public.restaurant_subscription_status(uuid)", "public.save_business_hours(uuid,jsonb)", "public.list_table_qr_tokens(uuid)"]) {
+      expect(priv(sig), sig).toEqual(["f|t|f|t"]);
+    }
+    expect(
+      psql(
+        "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname in ('restaurant_subscription_status','save_business_hours','list_table_qr_tokens') and (not p.prosecdef or p.proconfig is null or not ('search_path=\"\"' = any(p.proconfig)))",
+      ),
+    ).toEqual(["0"]);
+  });
+
+  it("create_public_order continua só service_role e create_staff_order só authenticated depois da 0131 (CREATE OR REPLACE não reabre EXECUTE)", () => {
+    expect(priv("public.create_public_order(text,text,jsonb,jsonb,jsonb,uuid,text,text,jsonb)")).toEqual(["f|f|f|t"]);
+    expect(priv("public.create_staff_order(uuid,jsonb,text,text)")?.[0]).toMatch(/^f\|t\|f\|/);
+  });
+
+  it("anon continua com a whitelist pública (as RPCs da Fase 8 não entram nela)", () => {
+    const anonExec = psql(
+      "select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace left join pg_depend d on d.objid=p.oid and d.deptype='e' where n.nspname='public' and d.objid is null and p.prorettype <> 'trigger'::regtype and has_function_privilege('anon', p.oid,'execute') order by 1",
+    );
+    expect(anonExec).toEqual(["public_menu", "public_platform_flags", "resolve_restaurant_by_slug", "restaurant_is_public", "storefront_origins", "track_order", "validate_cart"]);
+  });
+
+  it("S-08: authenticated lê restaurant_tables por colunas explícitas, SEM qr_token (nem anon); sem privilégio de tabela inteira", () => {
+    expect(psql("select has_table_privilege('authenticated','public.restaurant_tables','select'), has_table_privilege('anon','public.restaurant_tables','select')")).toEqual(["f|f"]);
+    expect(
+      psql("select column_name from information_schema.column_privileges where grantee='authenticated' and table_schema='public' and table_name='restaurant_tables' and privilege_type='SELECT' order by 1"),
+    ).toEqual(["area", "capacity", "created_at", "id", "name", "restaurant_id", "sort_order", "status", "updated_at"]);
+    expect(psql("select has_column_privilege('authenticated','public.restaurant_tables','qr_token','select'), has_column_privilege('anon','public.restaurant_tables','qr_token','select')")).toEqual(["f|f"]);
+  });
+
+  it("funções app_private da Fase 8 (estado da assinatura, limites, tetos) não são chamáveis por anon/authenticated/PUBLIC", () => {
+    const lines = psql(
+      "select p.proname||'|'||has_function_privilege('anon',p.oid,'execute')||'|'||has_function_privilege('authenticated',p.oid,'execute')||'|'||has_function_privilege('public',p.oid,'execute') from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='app_private' and p.proname in ('current_subscription','subscription_state','subscription_allows_orders','subscription_grace_ends','plan_limit','plan_usage','enforce_plan_limit','support_tickets_rate_limit')",
+    )!;
+    expect(lines.length).toBe(8);
+    for (const l of lines) expect(l, l).toMatch(/\|(false|f)\|(false|f)\|(false|f)$/);
   });
 });

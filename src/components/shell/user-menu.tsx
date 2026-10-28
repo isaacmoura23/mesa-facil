@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useId, useRef, useState, useTransition } from "react";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { logoutAction } from "@/lib/auth/actions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils/cn";
@@ -67,6 +68,15 @@ export function UserMenu({ name, email, caption }: UserMenuProps) {
           ) : null}
           {caption ? <p className="mt-1 text-xs text-muted">{caption}</p> : null}
         </div>
+        <Link
+          href="/conta/seguranca"
+          prefetch={false}
+          onClick={() => setOpen(false)}
+          className="flex h-10 w-full items-center gap-2 rounded-control px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
+        >
+          <ShieldCheck aria-hidden="true" className="size-4" />
+          Segurança da conta
+        </Link>
         <button
           type="button"
           onClick={() => {

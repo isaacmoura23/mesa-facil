@@ -648,14 +648,14 @@ describe("list_audit_logs", () => {
     expect(raw.qr_token).toBe("QRSECRET1");
   });
 
-  it("limite documentado: 'Bearer <jwt>' e JWT com espaço antes passam (a regra é ^eyJ...); valores não são inspecionados fora desse padrão", async () => {
+  it("F-45 (corrigido na mig. 0133): 'Bearer <jwt>' e JWT com espaço antes são removidos do valor", async () => {
     const [row] = await one("zz.t24.bearer");
-    // Documentado (F-45, Info): o valor com prefixo "Bearer " não casa com ^eyJ e sai como foi gravado.
-    expect(row.metadata.header_value).toBe(`Bearer ${JWT}`);
-    expect(row.metadata.nota).toBe(` ${JWT}`);
+    expect(row.metadata.header_value).toBe("[removido]");
+    expect(row.metadata.nota).toBe("[removido]");
+    expect(JSON.stringify(row.metadata)).not.toContain("eyJ");
   });
 
-  it.fails("F-44: chaves em português (senha, segredo, chave_api) deveriam ser removidas como password/secret/api_key (o cabeçalho da 0125 promete 'senha')", async () => {
+  it("F-44 (corrigido na mig. 0133): chaves em português (senha, segredo, chave_api) deveriam ser removidas como password/secret/api_key (o cabeçalho da 0125 promete 'senha')", async () => {
     const [row] = await one("zz.t24.senha");
     const text = JSON.stringify(row.metadata);
     expect(text).not.toContain("MINHASENHA");

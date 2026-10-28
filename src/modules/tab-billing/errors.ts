@@ -43,6 +43,10 @@ const MESSAGES: Record<string, { message: string; stale?: boolean }> = {
   INVALID_TENDERED: { message: "O valor recebido em dinheiro não pode ser menor que o valor do pagamento." },
   TENDERED_ONLY_CASH: { message: "Valor recebido e troco só valem para pagamento em dinheiro." },
   INVALID_PAYMENT_TARGET: { message: "Pagamento sem comanda ou pedido de destino." },
+  ORDER_NOT_FOUND: { message: "Pedido não encontrado ou sem acesso.", stale: true },
+  RESTAURANT_UNAVAILABLE: { message: "O restaurante não está ativo no momento." },
+  SUBSCRIPTION_INACTIVE: { message: "A assinatura do restaurante está inativa. Regularize o plano para continuar." },
+  RATE_LIMITED: { message: "Muitas tentativas em pouco tempo. Aguarde um instante e tente de novo." },
 };
 
 type ErrorLike = { message?: string; code?: string } | null | undefined;

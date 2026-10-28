@@ -207,6 +207,11 @@ export type CreateOrderInput = {
    * `newIdempotencyKey()` e reutilize-a nas tentativas se quiser retry seguro).
    */
   idempotencyKey?: string;
+  /**
+   * Token do CAPTCHA (Cloudflare Turnstile). Exigido pela API quando o restaurante/plataforma ativa a verificação;
+   * sem o token a API responde 403 `captcha_failed`. Gere com o widget do Turnstile na sua vitrine.
+   */
+  captchaToken?: string;
 };
 
 export type CreatedOrder = {

@@ -29,6 +29,11 @@ export const RPC_ERROR_MESSAGES = {
   restaurant_limit_reached:
     "Você atingiu o limite de restaurantes que podem ser registrados por conta.",
   restaurant_suspended: "Este restaurante está suspenso.",
+  SUBSCRIPTION_INACTIVE:
+    "A assinatura deste restaurante está inativa. Regularize o plano para continuar usando esta função.",
+  PLAN_LIMIT_REACHED:
+    "O limite do plano foi atingido. Remova itens que não usa mais ou peça a troca para um plano maior.",
+  RATE_LIMITED: "Muitas tentativas em pouco tempo. Aguarde alguns instantes e tente de novo.",
 } as const;
 
 export type RpcErrorCode = keyof typeof RPC_ERROR_MESSAGES;
@@ -57,4 +62,16 @@ export function rpcErrorMessage(
 ): string {
   const code = rpcErrorCode(error);
   return code ? RPC_ERROR_MESSAGES[code] : fallback;
+}
+
+/**
+ * Erros de plano/assinatura/limite (Fase 8). Têm prioridade sobre o tratamento por SQLSTATE
+ * (o banco pode usar qualquer código), então cada `failure()` de Server Action chama isto primeiro.
+ */
+export function planErrorMessage(error: { message?: string } | null | undefined): string | null {
+  const message = error?.message ?? "";
+  for (const code of ["SUBSCRIPTION_INACTIVE", "PLAN_LIMIT_REACHED", "RATE_LIMITED"] as const) {
+    if (message.includes(code)) return RPC_ERROR_MESSAGES[code];
+  }
+  return null;
 }

@@ -414,7 +414,7 @@ describe("delivery_zones", () => {
     rule(await as("ownerA").from("delivery_zones").update({ neighborhoods: [null] }).eq("id", id).select("id"), /delivery_zones_neighborhoods_valid/);
   });
 
-  it.fails("F-43: prefixo de CEP vazio (['']) ou com vírgula (['1,2']) deveria ser recusado — o CHECK valida o array_to_string, não cada elemento", async () => {
+  it("F-43 (corrigido na mig. 0133): prefixo de CEP vazio (['']) ou com vírgula (['1,2']) deveria ser recusado — o CHECK valida o array_to_string, não cada elemento", async () => {
     // array_to_string(['']) = '' casa a alternativa vazia da regex '^(...)?$' (prefixo vazio casaria TODOS os CEPs) e
     // array_to_string(['1,2']) = '1,2' vira "dois prefixos". Correção: exigir CADA elemento ~ '^[0-9]{1,8}$'
     // (ex.: CHECK (not exists (select 1 from unnest(postal_code_prefixes) p where p !~ '^[0-9]{1,8}$'))).

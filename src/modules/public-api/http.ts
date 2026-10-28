@@ -35,6 +35,7 @@ const DEFAULT_MESSAGES: Record<ApiErrorCode, string> = {
   origin_not_allowed: "Origem não autorizada para este restaurante.",
   payload_too_large: "Corpo da requisição grande demais (máximo 64 KB).",
   rate_limited: "Muitas requisições. Tente novamente em instantes.",
+  captcha_failed: "Verificação anti-robô ausente ou inválida (campo captchaToken).",
   internal_error: "Erro interno. Tente novamente em instantes.",
 };
 

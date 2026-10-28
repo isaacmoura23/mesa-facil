@@ -561,7 +561,7 @@ describe.skipIf(!up)("API pública v1 (HTTP real)", () => {
 
     // F-29: um NUL (\u0000) em `notes` passa pelo zod, mas o Postgres rejeita o jsonb (22P05) e a API responde 500 internal_error
     // em vez de 400. Correção: rejeitar \u0000 nas strings do corpo (ex.: .refine(s => !s.includes("\0"))) em schemas.ts.
-    it.fails("[F-29] NUL em notes deveria ser 400 invalid_request, mas hoje é 500 internal_error", async () => {
+    it("[F-29] (corrigido) NUL em notes deveria ser 400 invalid_request, mas hoje é 500 internal_error", async () => {
       const r = await quote(X.slug, body([{ productId: pPlain.id, quantity: 1, notes: "x\u0000y" }]));
       expect(r.status).toBeLessThan(500);
     });

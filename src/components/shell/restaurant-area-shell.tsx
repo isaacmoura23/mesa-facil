@@ -8,6 +8,7 @@ import type { AppArea } from "@/lib/auth/types";
 import { buildAppNav, buildOperacaoNav } from "@/config/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { SupabaseNotConfigured } from "@/components/supabase-not-configured";
+import { PlanBanners } from "./plan-banners";
 import { RestaurantSwitcher } from "./restaurant-switcher";
 import { ShellFrame } from "./shell-frame";
 import { UserMenu } from "./user-menu";
@@ -57,6 +58,7 @@ export async function RestaurantAreaShell({
     <ShellFrame
       areaLabel={AREA_LABEL[area]}
       nav={nav}
+      banner={<PlanBanners restaurantId={restaurant.restaurant_id} />}
       headerStart={
         <RestaurantSwitcher
           currentSlug={restaurant.slug}

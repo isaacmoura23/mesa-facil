@@ -37,12 +37,14 @@ export function buildProductImagePath(restaurantId: string, mimeType: string): s
 }
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const UUID_EXACT = new RegExp(`^${UUID}$`);
 
-/** Confere se o caminho tem exatamente o formato permitido para o restaurante. */
+/**
+ * Confere se o caminho tem exatamente o formato permitido para o restaurante (igual ao CHECK do banco: tudo em
+ * minúsculas, sem flag `i`). O id do restaurante só entra no padrão depois de validado como UUID (F-20), então
+ * nenhum metacaractere de RegExp passa.
+ */
 export function isOwnProductImagePath(path: string, restaurantId: string): boolean {
-  const pattern = new RegExp(
-    `^restaurants/${restaurantId}/products/${UUID}\\.(jpg|png|webp|avif)$`,
-    "i",
-  );
-  return pattern.test(path);
+  if (!UUID_EXACT.test(restaurantId)) return false;
+  return new RegExp(`^restaurants/${restaurantId}/products/${UUID}[.](jpg|png|webp|avif)$`).test(path);
 }

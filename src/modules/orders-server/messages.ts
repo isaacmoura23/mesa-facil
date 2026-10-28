@@ -22,6 +22,8 @@ export const ORDER_ERROR_MESSAGES: Record<string, string> = {
   ADDRESS_INVALID: "Confira o endereço de entrega.",
   INVALID_NOTES: "Confira as observações do pedido.",
   INVALID_IDEMPOTENCY_KEY: "Não foi possível identificar o envio. Recarregue a página e tente novamente.",
+  SUBSCRIPTION_INACTIVE: "Este restaurante está temporariamente indisponível para pedidos.",
+  RATE_LIMITED: "Muitos pedidos em pouco tempo. Aguarde alguns minutos e tente novamente.",
   IDEMPOTENCY_CONFLICT:
     "Este envio já foi usado com outro conteúdo. Recarregue a página e tente novamente.",
 };

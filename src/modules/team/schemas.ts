@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRealCalendarDate } from "@/lib/validation/date";
 import { ASSIGNABLE_ROLES } from "./types";
 import { PERMISSIONS } from "@/lib/auth/types";
 
@@ -20,7 +21,13 @@ export const roleSchema = z.enum(ASSIGNABLE_ROLES, { error: "Escolha uma funçã
 
 export const permissionSchema = z.enum(PERMISSIONS, { error: "Permissão desconhecida." });
 
-const dateSchema = z.union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")]);
+const dateSchema = z.union([
+  z.literal(""),
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.")
+    .refine(isRealCalendarDate, "Data inválida."),
+]);
 
 export const auditFiltersSchema = z.object({
   category: z.string().max(40),
