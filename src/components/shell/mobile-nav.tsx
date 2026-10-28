@@ -51,7 +51,7 @@ export function MobileNav({ items, label, drawerFooter }: MobileNavProps) {
     <>
       <nav
         aria-label={label}
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
+        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 rounded-3xl border border-line bg-surface/95 shadow-[var(--shadow-pop)] backdrop-blur lg:hidden"
       >
         <ul className="mx-auto flex max-w-xl items-stretch">
           {barItems.map((item) => {
@@ -109,7 +109,7 @@ export function MobileNav({ items, label, drawerFooter }: MobileNavProps) {
           onClick={(event) => {
             if (event.target === dialogRef.current) setDrawerOpen(false);
           }}
-          className="m-0 mt-auto h-auto max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-card border border-b-0 border-line bg-surface p-0 shadow-pop lg:hidden"
+          className="m-0 mt-auto h-auto max-h-[85dvh] w-full max-w-none overflow-y-auto rounded-t-3xl border border-b-0 border-line bg-surface p-0 shadow-pop lg:hidden"
         >
           <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="mb-3 flex items-center justify-between">

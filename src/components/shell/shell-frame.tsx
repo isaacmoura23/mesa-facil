@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { NavEntry } from "@/config/navigation";
 import { BrandMark } from "@/components/brand-mark";
 import { MobileNav } from "./mobile-nav";
-import { SidebarNav } from "./sidebar-nav";
+import { DesktopSidebar } from "./desktop-sidebar";
 
 type ShellFrameProps = {
   /** Nome do ambiente (ex.: "Gestão", "Operação", "Plataforma"). */
@@ -35,7 +35,7 @@ export function ShellFrame({
   const navLabel = `Navegação de ${areaLabel.toLowerCase()}`;
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)]">
+    <div className="min-h-dvh lg:flex">
       <a
         href="#conteudo"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-control focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-accent-fg"
@@ -43,20 +43,9 @@ export function ShellFrame({
         Ir para o conteúdo
       </a>
 
-      <aside className="hidden border-r border-line bg-surface lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col">
-        <div className="flex h-16 shrink-0 items-center border-b border-line px-5">
-          <BrandMark href="/entrar" />
-        </div>
-        <div className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="mb-2 px-3 text-xs font-medium text-muted">{areaLabel}</p>
-          <SidebarNav items={nav} label={navLabel} />
-        </div>
-        {navFooter ? (
-          <div className="shrink-0 border-t border-line p-3">{navFooter}</div>
-        ) : null}
-      </aside>
+      <DesktopSidebar areaLabel={areaLabel} nav={nav} navLabel={navLabel} navFooter={navFooter} />
 
-      <div className="flex min-h-dvh min-w-0 flex-col">
+      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <BrandMark href="/entrar" compact className="lg:hidden" />
@@ -70,7 +59,7 @@ export function ShellFrame({
           tabIndex={-1}
           className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-8 lg:pb-10"
         >
-          {banner ? <div className="mb-6">{banner}</div> : null}
+          {banner ? <div className="mb-6 empty:hidden">{banner}</div> : null}
           {children}
         </main>
       </div>
