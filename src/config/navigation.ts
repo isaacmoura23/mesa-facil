@@ -1,4 +1,5 @@
 import type { Permission } from "@/lib/auth/types";
+import type { NavBadgeKey } from "@/modules/operations/nav-badges";
 
 export type IconName =
   | "dashboard"
@@ -25,6 +26,8 @@ export type NavEntry = {
   icon: IconName;
   /** Tela exibida apenas em modo leitura neste ambiente. */
   readOnly?: boolean;
+  /** Selo de contagem (só quando o usuário pode agir sobre aquilo que é contado). */
+  badge?: NavBadgeKey;
 };
 
 type NavDefinition = {
@@ -34,6 +37,8 @@ type NavDefinition = {
   /** Basta UMA das permissões. Sem valor: visível a todos do ambiente. */
   anyOf?: readonly Permission[];
   readOnly?: boolean;
+  /** Selo de contagem e as permissões (basta UMA) de quem pode agir sobre ele. */
+  badge?: { key: NavBadgeKey; anyOf: readonly Permission[] };
 };
 
 /**
@@ -55,8 +60,20 @@ const APP_NAV: readonly NavDefinition[] = [
 
 /** Operação (/operacao/[slug]): telas de trabalho do dia a dia. */
 const OPERACAO_NAV: readonly NavDefinition[] = [
-  { segment: "pedidos", label: "Pedidos", icon: "orders", anyOf: ["orders.view"] },
-  { segment: "cozinha", label: "Cozinha", icon: "kitchen", anyOf: ["orders.view"] },
+  {
+    segment: "pedidos",
+    label: "Pedidos",
+    icon: "orders",
+    anyOf: ["orders.view"],
+    badge: { key: "new_orders", anyOf: ["orders.accept"] },
+  },
+  {
+    segment: "cozinha",
+    label: "Cozinha",
+    icon: "kitchen",
+    anyOf: ["orders.view"],
+    badge: { key: "kitchen_queue", anyOf: ["orders.update_status"] },
+  },
   { segment: "mesas", label: "Mesas", icon: "tables", anyOf: ["tables.view"] },
   { segment: "comandas", label: "Comandas", icon: "tabs", anyOf: ["tabs.view"] },
   { segment: "historico", label: "Histórico", icon: "history", anyOf: ["orders.view"] },
@@ -84,6 +101,7 @@ function resolve(
       label: item.label,
       icon: item.icon,
       readOnly: item.readOnly,
+      ...(item.badge && canAny(item.badge.anyOf) ? { badge: item.badge.key } : {}),
     }));
 }
 
