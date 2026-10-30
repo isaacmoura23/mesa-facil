@@ -551,7 +551,7 @@ describe("public_menu — variantes, selos, contato e URL da vitrine", () => {
     expect(text).not.toContain("zz-segredo");
     const { restaurant, ...rest } = m;
     expect(walkKeys(rest).has("phone")).toBe(false);
-    expect(Object.keys(restaurant).sort()).toEqual(["contact", "id", "logo_path", "name", "slug", "storefront_url", "timezone"]);
+    expect(Object.keys(restaurant).sort()).toEqual(["contact", "id", "logo_path", "name", "notice", "slug", "storefront_url", "timezone"]);
     expect(Object.keys(restaurant.contact).sort()).toEqual(["address_text", "phone", "whatsapp"]);
   });
 

@@ -125,13 +125,14 @@ export async function saveContactAction(slug: string, formData: FormData): Promi
   if (!parsed.success) {
     return { ok: false, message: "Revise os campos destacados.", fieldErrors: fieldErrorsOf(parsed.error) };
   }
-  const { whatsapp, phone, addressText, storefrontUrl } = parsed.data;
+  const { whatsapp, phone, addressText, storefrontUrl, notice } = parsed.data;
 
   const problem = await writeSettings(ctx, {
     whatsapp,
     phone,
     address_text: addressText,
     storefront_url: storefrontUrl,
+    storefront_notice: notice,
   });
   if (problem) return problem;
 

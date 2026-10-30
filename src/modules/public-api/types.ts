@@ -93,6 +93,8 @@ export type ApiMenu = {
     timezone: string | null;
     contact: ApiContact | null;
     storefrontUrl: string | null;
+    /** Aviso fixo do topo da vitrine (até 240 caracteres), ou null. */
+    notice: string | null;
   };
   settings: {
     acceptsOrders: boolean;
