@@ -3,6 +3,7 @@ import type { NavEntry } from "@/config/navigation";
 import { BrandMark } from "@/components/brand-mark";
 import { MobileNav } from "./mobile-nav";
 import { DesktopSidebar } from "./desktop-sidebar";
+import { ThemeToggle } from "./theme-toggle";
 
 type ShellFrameProps = {
   /** Nome do ambiente (ex.: "Gestão", "Operação", "Plataforma"). */
@@ -51,7 +52,10 @@ export function ShellFrame({
             <BrandMark href="/entrar" compact className="lg:hidden" />
             {headerStart}
           </div>
-          <div className="flex shrink-0 items-center gap-1">{headerEnd}</div>
+          <div className="flex shrink-0 items-center gap-1">
+            <ThemeToggle />
+            {headerEnd}
+          </div>
         </header>
 
         <main
