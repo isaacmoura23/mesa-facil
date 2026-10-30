@@ -413,6 +413,8 @@ export function OrdersBoard({ restaurantId, restaurantName, permissions }: Order
         actions={selected ? actionsFor(selected) : []}
         busy={selected ? pending.has(selected.id) : false}
         canPrint={permissions.print}
+        canRecordPayments={permissions.recordPayments}
+        onPaymentRecorded={(paidOrder) => void feed.syncOrder(paidOrder.id)}
         onClose={() => setSelectedId(null)}
         onAction={handleAction}
       />
