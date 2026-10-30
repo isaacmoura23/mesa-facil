@@ -2,10 +2,14 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { brand } from "@/config/brand";
+import { storefrontThemeClass } from "@/config/storefront-themes";
 import { getPublicEnvStatus } from "@/lib/env";
 import { SupabaseNotConfigured } from "@/components/supabase-not-configured";
 import { CartProvider } from "@/modules/storefront/cart-context";
 import { getPublicMenu } from "@/modules/storefront/data";
+import "@fontsource/londrina-solid/latin-400.css";
+import "@fontsource/londrina-solid/latin-900.css";
+import "@fontsource-variable/nunito/wght.css";
 import { CartButton, FloatingCartBar } from "./cart-button";
 import { CartDrawer } from "./cart-drawer";
 import { FooterContact, HeaderWhatsApp } from "./restaurant-contact";
@@ -35,14 +39,14 @@ export async function StorefrontShell({
 
   return (
     <CartProvider slug={restaurant.slug}>
-      <div className="flex min-h-dvh flex-col">
+      <div className={`flex min-h-dvh flex-col bg-bg text-fg ${storefrontThemeClass(restaurant.slug)}`}>
         <a
           href="#conteudo"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-control focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-pop"
         >
           Pular para o conteúdo
         </a>
-        <header className="sticky top-0 z-30 border-b border-line bg-surface">
+        <header className="sf-header sticky top-0 z-30 border-b border-line bg-surface">
           <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-3 px-4">
             <Link href={home} className="flex min-w-0 flex-1 items-center gap-3 rounded-control">
               <RestaurantLogo name={restaurant.name} logoPath={restaurant.logoPath} />

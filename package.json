@@ -17,6 +17,8 @@
     "test:e2e": "vitest run --project e2e"
   },
   "dependencies": {
+    "@fontsource-variable/nunito": "^5.3.0",
+    "@fontsource/londrina-solid": "^5.3.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "clsx": "^2.1.1",

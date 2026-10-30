@@ -173,3 +173,56 @@ dialog {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Tema da vitrine da Qi Buxo (chocolate e creme, morango só no destaque).
+ * Aplicado só dentro de `/r/qibuxo` pela classe de storefront-themes.ts.
+ * Tokens e tipografia vêm do catálogo digital dela (DESIGN.md do repositório
+ * qibuxo_cardapio). Fica sempre no claro, também com o sistema em modo escuro.
+ */
+.theme-qibuxo {
+  color-scheme: light;
+  --bg: #fbefe4;
+  --surface: #fff8f1;
+  --surface-2: #f6e6d6;
+  --line: #d8c0a4;
+  --line-strong: #bfa07d;
+  --fg: #3a2413;
+  --muted: #6a4b33;
+  --accent: #b5302a;
+  --accent-hover: #8f221e;
+  --accent-fg: #fbefe4;
+  --accent-soft: #fbe3dd;
+  --accent-soft-fg: #8f221e;
+  --ring: #b5302a;
+  --shadow-tint: 71 48 28;
+  --font-display: "Londrina Solid", "Arial Narrow", sans-serif;
+  font-family: "Nunito Variable", system-ui, sans-serif;
+}
+
+.theme-qibuxo h1,
+.theme-qibuxo h2 {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.theme-qibuxo h1 {
+  font-size: clamp(2.6rem, 10vw, 4rem);
+}
+
+.theme-qibuxo .sf-header {
+  background: #47301c;
+  border-color: #5e3f25;
+}
+
+.theme-qibuxo .sf-header,
+.theme-qibuxo .sf-header * {
+  color: #fbefe4;
+}
+
+.theme-qibuxo .sf-header a:hover,
+.theme-qibuxo .sf-header button:hover {
+  background: #5e3f25;
+}
