@@ -12,6 +12,8 @@ const url = process.env.TEST_DATABASE_URL;
 const suite = url ? describe : describe.skip;
 
 type Result = { rows: Record<string, unknown>[]; error?: string };
+// Resposta JSON das RPCs do caixa (campos variam por função; os testes conferem os que importam).
+type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 async function run(role: "authenticated" | "anon", userId: string | null, sql: string, params: unknown[] = []): Promise<Result> {
   const c = new Client({ connectionString: url });
@@ -55,7 +57,7 @@ async function pay(userId: string, orderId: string, method: string, amount: numb
 }
 const rpc = async (userId: string, call: string, params: unknown[]) => {
   const r = await as(userId, `select ${call} as r`, params);
-  return { ...r, r: (r.rows[0]?.r ?? null) as Record<string, any> | null };
+  return { ...r, r: (r.rows[0]?.r ?? null) as Json | null };
 };
 
 suite("caixa: turnos, movimentos, retiradas e permissões", () => {
@@ -241,7 +243,7 @@ suite("caixa: turnos, movimentos, retiradas e permissões", () => {
     expect(sum.r?.open_session?.expected_cents).toBe(expected);
 
     const list = await rpc(U.manager, "public.cash_list($1, now() - interval '1 day', now() + interval '1 day', null, null, 100, null)", [A]);
-    const rows = list.r as unknown as Record<string, any>[];
+    const rows = list.r as unknown as Json[];
     expect(rows.length).toBe(8); // suprimento, despesa, 2 vendas, 3 retiradas, 1 estorno
     expect(rows.find((x) => x.kind === "SALE" && x.change_cents === 1210)?.actor_name).toBe("Pessoa cashier");
     expect(rows.filter((x) => x.reversed).length).toBe(1);
@@ -268,13 +270,13 @@ suite("caixa: turnos, movimentos, retiradas e permissões", () => {
     const supply = await rpc(U.cashier, "public.cash_record_movement($1, 'SUPPLY', 100, null, null)", [A]);
     expect(supply.r?.movement.session_id).toBeNull();
     const sessions = await rpc(U.manager, "public.cash_list_sessions($1, 10)", [A]);
-    expect((sessions.r as unknown as Record<string, any>[])[0]).toMatchObject({ status: "CLOSED", difference_cents: -90, opened_by_name: "Pessoa cashier" });
+    expect((sessions.r as unknown as Json[])[0]).toMatchObject({ status: "CLOSED", difference_cents: -90, opened_by_name: "Pessoa cashier" });
   });
 
   it("pedidos de retirada pendentes aparecem para quem vê, com nomes; outro restaurante não vê", async () => {
     const r = await rpc(U.cashier, "public.cash_request_withdrawal($1, 1200, 'depósito no banco', null)", [A]);
     const pend = await rpc(U.owner, "public.cash_list_requests($1, 'PENDING', 50)", [A]);
-    const list = pend.r as unknown as Record<string, any>[];
+    const list = pend.r as unknown as Json[];
     expect(list.map((x) => x.id)).toContain(r.r?.request_id);
     expect(list[0]?.requested_by_name).toBe("Pessoa cashier");
     expect((await rpc(U.otherOwner, "public.cash_list_requests($1, 'PENDING', 50)", [A])).error).toBeTruthy();
