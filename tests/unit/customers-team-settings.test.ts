@@ -329,7 +329,7 @@ describe("restaurant-profile: fusos, logo e schema do estabelecimento", () => {
     expect(isValidTimezone("UTC")).toBe(true);
   });
 
-  it.fails("F-42: isValidTimezone aceita o que o banco recusa (Intl ignora caixa: 'america/sao_paulo'; o CHECK/trigger usa pg_timezone_names, sensível a caixa)", () => {
+  it("F-42: isValidTimezone aceita o que o banco recusa (Intl ignora caixa: 'america/sao_paulo'; o CHECK/trigger usa pg_timezone_names, sensível a caixa)", () => {
     // O app aceita, a action tenta gravar e o banco responde INVALID_TIMEZONE (23514). Correção: comparar com a lista canônica
     // (Intl.supportedValuesOf('timeZone')) ou exigir igualdade com Intl.DateTimeFormat(...).resolvedOptions().timeZone.
     expect(isValidTimezone("america/sao_paulo")).toBe(false);
@@ -367,13 +367,13 @@ describe("restaurant-profile: fusos, logo e schema do estabelecimento", () => {
     }
   });
 
-  it.fails("F-49: isOwnLogoPath usa a flag /i e aceita RESTAURANTS/... e UUID em maiúsculas; o CHECK do banco (restaurants_logo_path_scope) recusa (mesma classe do F-20)", () => {
+  it("F-49: isOwnLogoPath usa a flag /i e aceita RESTAURANTS/... e UUID em maiúsculas; o CHECK do banco (restaurants_logo_path_scope) recusa (mesma classe do F-20)", () => {
     expect(isOwnLogoPath(`RESTAURANTS/${RID}/logo/${UUID}.png`, RID)).toBe(false);
     expect(isOwnLogoPath(`restaurants/${RID.toUpperCase()}/logo/${UUID}.png`, RID)).toBe(false);
     expect(isOwnLogoPath(`restaurants/${RID}/logo/${UUID.toUpperCase()}.PNG`, RID)).toBe(false);
   });
 
-  it.fails("F-49b: restaurantId com metacaracteres é interpolado no RegExp sem escapar ('.' casa qualquer caractere)", () => {
+  it("F-49b: restaurantId com metacaracteres é interpolado no RegExp sem escapar ('.' casa qualquer caractere)", () => {
     const fake = RID.replace(/-/g, ".");
     expect(isOwnLogoPath(`restaurants/${RID}/logo/${UUID}.png`, fake)).toBe(false);
     expect(isOwnLogoPath(`restaurants/${RID}/logo/${UUID}.png`, ".*")).toBe(false);

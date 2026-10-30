@@ -106,7 +106,7 @@ describe("tables/errors: parseTabsError", () => {
   });
 
   // F-38 (UI): o banco levanta estes códigos ao abrir comanda/lançar pedido mas a tela só mostra "verifique a conexão".
-  it.fails("[F-38] RESTAURANT_UNAVAILABLE, LABEL_REQUIRED, INVALID_LABEL, INVALID_GUESTS, INVALID_NOTES e INVALID_IDEMPOTENCY_KEY têm mensagem própria", () => {
+  it("[F-38] RESTAURANT_UNAVAILABLE, LABEL_REQUIRED, INVALID_LABEL, INVALID_GUESTS, INVALID_NOTES e INVALID_IDEMPOTENCY_KEY têm mensagem própria", () => {
     for (const c of ["RESTAURANT_UNAVAILABLE", "LABEL_REQUIRED", "INVALID_LABEL", "INVALID_GUESTS", "INVALID_NOTES", "INVALID_IDEMPOTENCY_KEY"]) {
       expect(parseTabsError({ message: `${c}: x` }).message, c).not.toMatch(/conexão/i);
     }

@@ -194,7 +194,7 @@ describe.skipIf(!up)("API pública v1: pedidos (HTTP real)", () => {
       expect(orders.every((o) => o.customer_phone === digits(ph))).toBe(true);
       expect(orders.find((o) => o.customer_name === "zz-Primeiro")?.table_id).toBeNull();
       const cust = (await admin().from("customers").select("name,email").eq("restaurant_id", X.id).eq("phone", digits(ph))).data as any[];
-      expect(cust).toEqual([{ name: "zz-Primeiro", email: "zz.cliente@example.test" }]);
+      expect(cust).toEqual([{ name: "zz-Primeiro", email: null }]); // S-04: e-mail de cliente existente nunca é preenchido/sobrescrito
     });
   });
 
@@ -403,7 +403,7 @@ describe.skipIf(!up)("API pública v1: pedidos (HTTP real)", () => {
 
     // F-30: NUL (\u0000) em campos de texto passa pelo zod, o jsonb do Postgres recusa (22P05) e a API responde 500 em vez de 400.
     // Mesma causa do F-29 (cart/quote). Correção: recusar \u0000 nas strings do corpo (zod .refine) em orders-server/schemas.ts.
-    it.fails("[F-30] NUL em customer.name / notes deveria ser 4xx, mas hoje é 500 internal_error", async () => {
+    it("[F-30] (corrigido) NUL em customer.name / notes deveria ser 4xx, mas hoje é 500 internal_error", async () => {
       const r = await post(X.slug, orderBody({ customer: { name: "zz-a\u0000b", phone: newPhone() } }));
       expect(r.status).toBeLessThan(500);
       const r2 = await post(X.slug, orderBody({ notes: "x\u0000y" }));

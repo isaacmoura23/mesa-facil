@@ -32,7 +32,9 @@ describe("dono lê (modo monitoramento)", () => {
       ["payments", 1],
       ["audit_logs", 0],
     ] as const) {
-      const res = await o.from(table).select("*");
+      // restaurant_tables: sem qr_token para o authenticated (S-08, migração 133); lê-se por colunas.
+      const cols = table === "restaurant_tables" ? "id,restaurant_id,name,area,capacity,status,sort_order,created_at,updated_at" : "*";
+      const res = await o.from(table).select(cols);
       expectOk(res);
       expect(rows(res).length, table).toBeGreaterThanOrEqual(min);
     }

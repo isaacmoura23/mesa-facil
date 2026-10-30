@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hasControlChars } from "@/lib/validation/text";
 import { CART_ERROR_MESSAGES, GENERIC_CART_ERROR } from "@/modules/storefront/messages";
 import { FULFILLMENTS, isUuid, type Fulfillment } from "@/modules/storefront/schemas";
 import type {
@@ -434,7 +435,11 @@ const quoteRequestItemSchema = z.object({
   variantId: uuid.nullish(),
   quantity: z.number().int().min(1).max(99),
   modifierIds: z.array(uuid).max(MAX_MODIFIERS_PER_ITEM).default([]),
-  notes: z.string().max(MAX_NOTES_LENGTH).nullish(),
+  notes: z
+    .string()
+    .max(MAX_NOTES_LENGTH)
+    .refine((v) => !hasControlChars(v), "Texto com caracteres inválidos.")
+    .nullish(),
 });
 
 export const quoteRequestSchema = z.object({

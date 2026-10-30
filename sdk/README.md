@@ -364,3 +364,9 @@ espera e cacheie o cardápio na vitrine (`revalidate`) em vez de chamar a cada v
 npx tsc -p sdk/tsconfig.json --noEmit   # checagem de tipos
 cd sdk && npm run build                 # gera dist/ (ESM + .d.ts)
 ```
+
+## CAPTCHA e limites (proteção contra abuso)
+
+- Se a verificação CAPTCHA (Cloudflare Turnstile) estiver ligada no servidor, envie `captchaToken` em `createOrder`; sem ele a API responde `403 captcha_failed` (`StorefrontApiError.code === "captcha_failed"`).
+- Pedidos também têm limite por telefone (5 por hora) e por restaurante (60 por minuto): a resposta traz o erro `RATE_LIMITED`.
+- Restaurante com assinatura vencida ou cancelada responde `SUBSCRIPTION_INACTIVE`: mostre "restaurante temporariamente indisponível".

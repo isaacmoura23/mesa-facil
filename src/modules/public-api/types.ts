@@ -147,6 +147,7 @@ export type ApiErrorCode =
   | "origin_not_allowed"
   | "payload_too_large"
   | "rate_limited"
+  | "captcha_failed"
   | "internal_error";
 
 export type ApiErrorBody = {

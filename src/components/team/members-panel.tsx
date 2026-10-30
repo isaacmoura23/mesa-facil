@@ -106,8 +106,8 @@ export function MembersPanel({ slug, restaurantName, members, currentUserId }: M
             Convites pendentes ({pending.length})
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-warning-soft-fg">
-            Nenhum e-mail é enviado. Peça para cada pessoa se cadastrar em <strong>/entrar</strong> com o e-mail
-            indicado, confirmar o e-mail e aceitar o convite.
+            Cada pessoa precisa entrar (ou se cadastrar) em <strong>/entrar</strong> com o e-mail indicado, confirmar o
+            e-mail e aceitar o convite. Se o e-mail não chegou, use &quot;Renovar&quot; ou peça para ela se cadastrar.
           </p>
           <ul className="mt-4 flex flex-col gap-3">
             {pending.map((member) => (

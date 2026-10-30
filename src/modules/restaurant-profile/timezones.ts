@@ -32,8 +32,15 @@ export const TIMEZONES: readonly TimezoneOption[] = [
 export function isValidTimezone(value: string): boolean {
   if (value.trim() === "" || value.length > 64) return false;
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return true;
+    // O Intl ignora a caixa ("america/sao_paulo" passa) e o banco compara com pg_timezone_names, que não ignora (F-42):
+    // exige o nome exatamente como o ambiente o conhece.
+    const resolved = new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions().timeZone;
+    const supported = Intl.supportedValuesOf("timeZone");
+    if (resolved === value || supported.includes(value)) return true;
+    // Só difere na caixa do nome canônico (ou de um nome conhecido): o banco recusaria.
+    const lower = value.toLowerCase();
+    if (resolved.toLowerCase() === lower || supported.some((name) => name.toLowerCase() === lower)) return false;
+    return true; // apelido IANA com a grafia exata (ex.: America/Argentina/Buenos_Aires)
   } catch {
     return false;
   }

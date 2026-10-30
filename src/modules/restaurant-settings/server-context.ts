@@ -2,7 +2,7 @@ import "server-only";
 import { revalidatePath, updateTag } from "next/cache";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { getPublicEnvStatus } from "@/lib/env";
-import { GENERIC_ERROR_MESSAGE, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
+import { GENERIC_ERROR_MESSAGE, planErrorMessage, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { storefrontMenuTag } from "@/modules/menu/tags";
@@ -71,6 +71,8 @@ const CHECK_MESSAGES: ReadonlyArray<readonly [string, string]> = [
 
 /** Converte erros do banco em mensagens PT-BR. Mensagens cruas nunca saem daqui. */
 export function failure(error: DbError, fallback: string = GENERIC_ERROR_MESSAGE): Failure {
+  const planMessage = planErrorMessage(error);
+  if (planMessage) return { ok: false, message: planMessage };
   const code = error?.code;
   const message = error?.message ?? "";
   if (code === "42501") return { ok: false, message: RPC_ERROR_MESSAGES.forbidden };

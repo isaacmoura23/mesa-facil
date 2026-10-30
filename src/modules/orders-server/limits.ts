@@ -1,5 +1,7 @@
 import {
+  checkLimit,
   createRateLimiter,
+  refundLimit,
   type RateLimiter,
   type RateLimitResult,
 } from "@/modules/public-api/rate-limit";
@@ -22,9 +24,9 @@ const globalStore = globalThis as typeof globalThis & { __mesafacilOrderLimitsV2
 
 export function getOrderLimiters(): Store {
   globalStore.__mesafacilOrderLimitsV2 ??= {
-    attempts: createRateLimiter({ limit: ATTEMPT_LIMIT, windowMs: ORDER_WINDOW_MS }),
-    orders: createRateLimiter({ limit: ORDER_LIMIT, windowMs: ORDER_WINDOW_MS }),
-    track: createRateLimiter({ limit: TRACK_LIMIT, windowMs: TRACK_WINDOW_MS }),
+    attempts: createRateLimiter({ limit: ATTEMPT_LIMIT, windowMs: ORDER_WINDOW_MS, name: "order-attempts" }),
+    orders: createRateLimiter({ limit: ORDER_LIMIT, windowMs: ORDER_WINDOW_MS, name: "orders" }),
+    track: createRateLimiter({ limit: TRACK_LIMIT, windowMs: TRACK_WINDOW_MS, name: "track" }),
   };
   return globalStore.__mesafacilOrderLimitsV2;
 }
@@ -50,4 +52,22 @@ export function beginOrderAttempt(ip: string, slug: string): OrderAttempt {
 
 export function checkTrackRateLimit(ip: string, slug: string): RateLimitResult {
   return getOrderLimiters().track.check(`${ip}|${slug}`);
+}
+
+/**
+ * Versão do app (Server Action e API): mesma regra de `beginOrderAttempt`, mas com contador compartilhado no
+ * Upstash quando configurado (fallback em memória). A versão síncrona acima fica para testes e compatibilidade.
+ */
+export async function beginOrderAttemptShared(ip: string, slug: string): Promise<OrderAttempt> {
+  const { attempts, orders } = getOrderLimiters();
+  const key = `${ip}|${slug}`;
+  const a = await checkLimit(attempts, key);
+  if (!a.allowed) return { allowed: false, retryAfterSeconds: a.retryAfterSeconds };
+  const o = await checkLimit(orders, key);
+  if (!o.allowed) return { allowed: false, retryAfterSeconds: o.retryAfterSeconds };
+  return { allowed: true, finish: (created) => (created ? undefined : void refundLimit(orders, key)) };
+}
+
+export function checkTrackRateLimitShared(ip: string, slug: string): Promise<RateLimitResult> {
+  return checkLimit(getOrderLimiters().track, `${ip}|${slug}`);
 }

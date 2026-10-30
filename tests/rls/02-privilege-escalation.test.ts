@@ -333,9 +333,9 @@ describe("restaurants / profiles / planos: colunas e escrita restritas", () => {
     const ins = await as("superadmin").from("plans").insert({ code, name: "zz DEMO plano", price_cents: 1 }).select("id").single();
     expectOk(ins);
     cleanup.add(async () => void (await admin().from("plans").delete().eq("code", code)));
-    const del = await as("superadmin").from("plans").delete().eq("id", ins.data!.id).select("id");
-    expectOk(del);
-    expect(rows(del)).toHaveLength(1);
+    // DELETE direto em plans foi revogado (migração 131): o plano só muda por RPC, nunca apagado via REST.
+    expectDenied(await as("superadmin").from("plans").delete().eq("id", ins.data!.id).select("id"), /42501|permission denied/i);
+    expect(rows(await admin().from("plans").select("id").eq("id", ins.data!.id))).toHaveLength(1);
   });
 
   it("assinaturas: dono lê a do próprio restaurante, não escreve; garçom não lê; B invisível", async () => {
@@ -348,7 +348,8 @@ describe("restaurants / profiles / planos: colunas e escrita restritas", () => {
     expectNotApplied(await as("ownerA").from("subscriptions").update({ status: "canceled" }).eq("restaurant_id", A().id).select("id"));
     expectNotApplied(await as("ownerA").from("subscriptions").delete().eq("restaurant_id", A().id).select("id"));
     const live = await admin().from("subscriptions").select("status").eq("restaurant_id", A().id);
-    expect(rows(live).map((s) => s.status)).toContain("trialing");
+    // Seed (scripts/seed-dev.ts): DEMO A tem assinatura ativa no plano de demonstração ilimitado.
+    expect(rows(live).map((s) => s.status)).toContain("active");
   });
 });
 

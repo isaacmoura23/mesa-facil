@@ -124,7 +124,7 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 export function paymentMethodLabel(method: string): string {
-  return PAYMENT_METHOD_LABELS[method] ?? "Outro";
+  return Object.hasOwn(PAYMENT_METHOD_LABELS, method) ? PAYMENT_METHOD_LABELS[method] : "Outro";
 }
 
 export function orderStatusLabel(status: string): string {

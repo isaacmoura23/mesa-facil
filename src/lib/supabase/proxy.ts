@@ -4,7 +4,7 @@ import { getPublicEnvStatus } from "@/lib/env";
 import { sanitizeNext } from "@/lib/utils/safe-redirect";
 
 /** Prefixos que exigem sessão. A autorização fina é feita nos guards do servidor. */
-const PROTECTED_PREFIXES = ["/operacao", "/app", "/platform", "/entrar"] as const;
+const PROTECTED_PREFIXES = ["/operacao", "/app", "/platform", "/entrar", "/conta"] as const;
 const AUTH_PAGES = ["/login", "/cadastro"] as const;
 
 function matchesPrefix(pathname: string, prefix: string): boolean {

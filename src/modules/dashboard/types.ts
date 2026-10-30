@@ -43,5 +43,5 @@ export const PAYMENT_METHOD_NAMES: Record<string, string> = {
 };
 
 export function paymentMethodName(method: string): string {
-  return PAYMENT_METHOD_NAMES[method] ?? "Outra forma";
+  return Object.hasOwn(PAYMENT_METHOD_NAMES, method) ? PAYMENT_METHOD_NAMES[method] : "Outra forma";
 }

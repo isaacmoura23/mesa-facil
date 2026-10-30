@@ -245,7 +245,7 @@ describe("tables-admin/schemas", () => {
 
   // F-40: Date aceita 30/02 (vira 02/03), então o filtro passa e o Postgres recusa "2026-02-30T00:00:00-03:00" (22008): a lista
   // mostra a mensagem de erro de carregamento em vez de ignorar o parâmetro inválido.
-  it.fails("[F-40] datas impossíveis do calendário (30/02, 31/04) são ignoradas como as demais entradas inválidas", () => {
+  it("[F-40] datas impossíveis do calendário (30/02, 31/04) são ignoradas como as demais entradas inválidas", () => {
     for (const d of ["2026-02-30", "2026-02-31", "2026-04-31", "2026-06-31"]) {
       expect(parseTabFilters({ from: d }).from, d).toBeNull();
       expect(parseTabFilters({ to: d }).to, d).toBeNull();
@@ -316,7 +316,7 @@ describe("tables-admin/format", () => {
   });
 
   // F-19 (mesma classe): PAYMENT_METHOD_LABELS[method] ?? "Outro" devolve uma FUNÇÃO para "constructor"/"toString".
-  it.fails("[F-39] paymentMethodLabel('constructor'/'toString'/'__proto__') devolve texto, não função herdada de Object.prototype", () => {
+  it("[F-39] paymentMethodLabel('constructor'/'toString'/'__proto__') devolve texto, não função herdada de Object.prototype", () => {
     for (const k of ["constructor", "toString", "__proto__", "hasOwnProperty"]) expect(typeof paymentMethodLabel(k), k).toBe("string");
   });
 

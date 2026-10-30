@@ -1,6 +1,6 @@
 import "server-only";
 import { publicImageUrl } from "@/lib/storage";
-import { beginOrderAttempt, getOrderLimiters } from "@/modules/orders-server/limits";
+import { beginOrderAttemptShared, getOrderLimiters } from "@/modules/orders-server/limits";
 import { submitPublicOrder, trackOrder } from "@/modules/orders-server/service";
 import { createOriginsCache, type OriginsCache } from "./cors";
 import { fetchMenuRaw, fetchQuoteRaw, fetchStorefrontOrigins } from "./data";
@@ -32,9 +32,9 @@ const globalStore = globalThis as typeof globalThis & { __mesafacilPublicApiV4?:
 function build(): Singleton {
   const windowMs = 60_000;
   const limiters = {
-    menu: createRateLimiter({ limit: RATE_LIMITS.menu, windowMs }),
-    quote: createRateLimiter({ limit: RATE_LIMITS.quote, windowMs }),
-    global: createRateLimiter({ limit: RATE_LIMITS.global, windowMs }),
+    menu: createRateLimiter({ limit: RATE_LIMITS.menu, windowMs, name: "api-menu" }),
+    quote: createRateLimiter({ limit: RATE_LIMITS.quote, windowMs, name: "api-quote" }),
+    global: createRateLimiter({ limit: RATE_LIMITS.global, windowMs, name: "api-global" }),
   };
   const origins = createOriginsCache({ fetchOrigins: fetchStorefrontOrigins, ttlMs: 60_000 });
   const api = createPublicApi({
@@ -43,9 +43,9 @@ function build(): Singleton {
     loadOrigins: (slug) => origins.get(slug),
     limiters,
     orders: {
-      submit: (slug, input) => submitPublicOrder(input, { slug, source: "api" }),
+      submit: (slug, input, meta) => submitPublicOrder(input, { slug, source: "api", ip: meta?.ip }),
       track: trackOrder,
-      beginAttempt: beginOrderAttempt,
+      beginAttempt: beginOrderAttemptShared,
       trackLimiter: getOrderLimiters().track,
     },
     isDev: () => process.env.NODE_ENV !== "production",

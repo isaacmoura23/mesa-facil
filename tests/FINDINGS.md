@@ -220,3 +220,37 @@ Origem: `tests/rls/26-platform-rpcs` (migs. 0128-0130, só clientes autenticados
 - `support` recebe `FORBIDDEN: acesso restrito à plataforma` idêntico ao de qualquer não-admin em todas as escritas e em `platform_list_audit_logs`; anon recebe 42501 (sem EXECUTE).
 - `period_end` no passado é sempre recusado (`INVALID_PERIOD`); `cancelled` ignora `p_period_end`; reativar após cancelar cria nova linha (histórico preservado).
 - Sessão de suporte: ausente, de outro admin, expirada ou encerrada => `SUPPORT_SESSION_INVALID` idêntico; a visão grava `support.overview_viewed` (visível ao dono). Com sessão ativa o superadmin também lê as tabelas por RLS (`has_support_access`), sem sessão não lê nada.
+
+---
+
+# Fase 8: status dos achados após P8-DB e P8-APP (TESTS8)
+
+Verificação: `tests/rls/27-subscription-enforcement` (35 testes), `tests/unit/phase8-*` (40), ajustes em `14`, `20`, `21`, `22`, `24`, `25`, `19` e unitários. Os `it.fails` corrigidos viraram `it`.
+
+| # | Status | Como foi verificado |
+|---|---|---|
+| F-17 | **corrigido no app** (magic bytes no upload, `image-bytes.ts`); o bucket cru ainda aceita HTML declarado como PNG (`17` segue `it.fails`, é o limite do Storage; só o fluxo do painel é protegido) | `unit/phase8-misc` (HTML/SVG/GIF/PDF/vazio/truncado recusados) |
+| F-20, F-49 | corrigido (`image.ts`/`logo.ts`: só minúsculas, `restaurantId` escapado) | `unit/menu-image-format`, `unit/customers-team-settings` (`.JPG` agora recusado) |
+| F-24 | corrigido (Vercel: `x-real-ip`/`x-vercel-forwarded-for`; `TRUSTED_PROXY_HOPS` pela direita; produção sem proxy = `unknown`) | `unit/phase8-rate-limit` (`clientIp`) |
+| F-29, F-30 | corrigido (NUL => 4xx) | `19`, `21` viraram `it` |
+| F-35 | corrigido (mig. 0133) | `22` virou `it` |
+| F-37, F-38, F-39, F-40, F-42, F-48 | corrigidos no app | `unit/tab-billing`, `tables-staff`, `bill-and-tables-admin`, `customers-team-settings`, `period` viraram `it` |
+| F-43 | corrigido (mig. 0133, CHECK por elemento) | `25` virou `it` |
+| F-44, F-45 | corrigidos (mig. 0133: `senha`/`segredo`/`chave*`, `Bearer eyJ...`, JWT após espaço) | `24` virou `it`; `27` (sanitização) |
+| F-50 | corrigido (mig. 0131: sem DELETE em `plans`; só inativar) | `27` |
+| F-54 | decisão documentada: `default_trial_days=0` nasce vencido e agora BLOQUEIA pedidos (gate ativo) | `27` (trial vencido) |
+| F-16 | continua aberto (JSON com 100 mil níveis => 500 no PostgREST) | `16` `it.fails` |
+| F-51, F-52 | continuam abertos (`NOT_AUTHENTICATED` x `UNAUTHENTICATED`; `describePlatformAudit` lê campos errados) | `unit/platform-admin` `it.fails` |
+| S-01 | corrigido (CSP `frame-ancestors`, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy; `X-Powered-By` fora): conferido com `curl -I /login` | manual |
+| S-02 | corrigido (estado da assinatura bloqueia pedido público/de salão; limites de membros/mesas/produtos) | `27` |
+| S-03 | config de Auth/MFA (produção): MFA obrigatório para `platform_admins` só liga em produção ou com `PLATFORM_REQUIRE_MFA=true`; o E2E e o dev rodam com ele desligado | `unit/phase8-misc` (`isPlatformMfaRequired`) |
+| S-04 | corrigido no banco (5 pedidos/h por telefone, 60/min por restaurante, e-mail de cliente existente nunca sobrescrito) e no app (Upstash/memória, Turnstile) | `27` (inclui 12 sessões => exatamente 5), `unit/phase8-rate-limit` |
+| S-05, S-09, S-10, S-11 | sem mudança de banco (aceitos/documentados em `docs/REVISAO-SEGURANCA.md`) | n/a |
+| S-06, S-07 | corrigidos no app (matcher do `proxy.ts`; `emailRedirectTo` só de `NEXT_PUBLIC_SITE_URL`) | não coberto por teste automatizado (revisão de código) |
+| S-08 | corrigido (mig. 0133): `qr_token` ilegível por `authenticated`/`anon` (select por coluna), fora do Realtime, `list_table_qr_tokens`/`rotate_table_qr` só `tables.manage` | `27`, `14`, `22` |
+| S-12 | corrigido (mig. 0131): 20 chamados/hora por usuário, `RATE_LIMITED` | `27` |
+
+Novos achados da Fase 8 (informativos):
+- **F-55 (Info)**: o gate de assinatura vem ANTES da idempotência em `create_public_order`: com a assinatura vencida, nem o replay de um pedido já criado devolve o recibo (`SUBSCRIPTION_INACTIVE`). Coerente com "vitrine indisponível", mas o acompanhamento por `track_order` continua funcionando. Teste `27` documenta o comportamento.
+- **F-56 (Info)**: `INSERT ... RETURNING qr_token` (e `select *`) em `restaurant_tables` passa a falhar com 42501 para clientes; qualquer tela que ainda leia a coluna precisa de `list_table_qr_tokens` (o app atual já usa).
+- Seed: DEMO A/B agora têm o plano `demo-ilimitado` (sem limites) em assinatura `active` até 10 anos; `qibuxo`, `la-pastelaria` e `o-nailton` locais seguem sem assinatura (estado `none`, sem bloqueio nem limite) e não são tocados.

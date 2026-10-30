@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Fase 4, painel de cobrança: src/modules/tab-billing/{money,errors,types}. Módulos puros (zod); sem rede nem React.
- * Bugs confirmados usam `it.fails` com o código F-xx (quando corrigidos, o teste falha e vira `it`).
+ * Bugs confirmados usam `it.fails` com o código F-xx (F-37/F-38 corrigidos na Fase 8: viraram `it`).
  */
 import { describe, expect, it } from "vitest";
 import { BillingActionError, parseBillingError } from "../../src/modules/tab-billing/errors";
@@ -60,7 +60,7 @@ describe("tab-billing/money: parseMoneyToCents", () => {
   });
 
   // F-37: com vírgula, TODOS os pontos são descartados sem validar o agrupamento de milhar.
-  it.fails("[F-37] agrupamento de milhar inválido com vírgula deve ser rejeitado ('1.2,50' vira R$ 12,50; '12.50,3' vira R$ 1.250,30)", () => {
+  it("[F-37] agrupamento de milhar inválido com vírgula deve ser rejeitado ('1.2,50' vira R$ 12,50; '12.50,3' vira R$ 1.250,30)", () => {
     expect(parseMoneyToCents("1.2,50")).toBeNull();
     expect(parseMoneyToCents("12.50,3")).toBeNull();
     expect(parseMoneyToCents("1.23,45")).toBeNull();
@@ -143,7 +143,7 @@ describe("tab-billing/errors: parseBillingError", () => {
   });
 
   // F-38: o banco levanta estes códigos mas a UI de cobrança só mostra o texto genérico "verifique a conexão".
-  it.fails("[F-38] ORDER_NOT_FOUND e RESTAURANT_UNAVAILABLE (levantados por record_payment/close_tab) têm mensagem própria", () => {
+  it("[F-38] ORDER_NOT_FOUND e RESTAURANT_UNAVAILABLE (levantados por record_payment/close_tab) têm mensagem própria", () => {
     for (const c of ["ORDER_NOT_FOUND", "RESTAURANT_UNAVAILABLE"]) expect(parseBillingError({ message: `${c}: x` }).code, c).toBe(c);
     expect(parseBillingError({ message: "ORDER_NOT_FOUND: x" }).message).not.toMatch(/conexão/i);
   });

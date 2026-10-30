@@ -241,7 +241,7 @@ describe("dashboard/orders: filtros, cursor e CSV", () => {
     expect(metricsSchema.safeParse({}).success).toBe(false);
   });
 
-  it.fails("F-48: paymentMethodName('constructor') devolve uma FUNÇÃO (Object.prototype) em vez de 'Outra forma' (mesma classe de F-19/F-39)", () => {
+  it("F-48: paymentMethodName('constructor') devolve uma FUNÇÃO (Object.prototype) em vez de 'Outra forma' (mesma classe de F-19/F-39)", () => {
     for (const k of ["constructor", "toString", "__proto__"]) expect(paymentMethodName(k)).toBe("Outra forma");
   });
 });

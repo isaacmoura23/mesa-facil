@@ -91,9 +91,9 @@ function InviteForm({ slug, run, pending, onClose }: { slug: string; run: RunFn;
       </SelectField>
       <Alert tone="info" title="Como a pessoa entra">
         <p>
-          Nenhum e-mail é enviado por enquanto. Peça para a pessoa se cadastrar (ou entrar) em{" "}
-          <strong>/entrar</strong> usando exatamente <strong>este e-mail</strong>, confirmar o e-mail da conta e
-          aceitar o convite. O proprietário não pode ser convidado.
+          Enviamos um e-mail de convite para quem ainda não tem conta. A pessoa precisa usar exatamente{" "}
+          <strong>este e-mail</strong>, confirmar o e-mail da conta e aceitar o convite em <strong>/entrar</strong>.
+          Se o e-mail não chegar, ela pode se cadastrar sozinha. O proprietário não pode ser convidado.
         </p>
       </Alert>
       <FormError message={formError} />

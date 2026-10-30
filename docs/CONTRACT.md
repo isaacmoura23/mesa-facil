@@ -267,3 +267,31 @@ Escrita (superadmin, exceto onde dito):
 - **PLAT-A**: `src/app/platform/{dashboard,restaurants}/**`, `src/modules/platform-restaurants/**`, `src/components/platform-restaurants/**`.
 - **PLAT-B**: `src/app/platform/{plans,subscriptions,support,audit-logs,settings}/**`, `src/modules/platform-admin/**`, `src/components/platform-admin/**`.
 - **TESTS6** (por último): `tests/**`, `scripts/seed-dev.ts`.
+
+---
+
+# Fase 8 — Uso real (contrato)
+
+Decisões do dono: serviços gratuitos novos (Upstash = rate limit; Cloudflare Turnstile = CAPTCHA; Resend = SMTP do Supabase Auth);
+planos aplicados de verdade (cobrança manual pelo superadmin); repositório privado; sem Pix online nesta etapa; domínio próprio e marca depois.
+Tudo que depende de chave externa deve funcionar **sem a chave** (fallback seguro e aviso claro) e ligar sozinho quando a variável existir.
+
+## Planos e assinaturas aplicados (P8-DB, migrações `20260101000131+`)
+- `app_private.subscription_state(rid)` → `active|trial|expired|past_due|cancelled|none` (trial vence por `trial_ends_at`; ativo por `current_period_end`; sem cron: calculado na hora). `past_due` tem tolerância de 7 dias.
+- `create_public_order` e `create_staff_order`: se o estado for `expired`/`cancelled`/`past_due` (fora da tolerância) → erro estável `SUBSCRIPTION_INACTIVE` (vitrine mostra "restaurante indisponível"); leitura e relatórios continuam.
+- Limites do plano (`plans.limits`: max_members, max_tables, max_products/max_menu_items) aplicados por trigger BEFORE INSERT em membros ativos/convidados, mesas e produtos: erro `PLAN_LIMIT_REACHED` (null/ausente = ilimitado). Restaurante sem assinatura = tratado como trial padrão sem bloqueio.
+- RPC `restaurant_subscription_status(p_restaurant)` (membros do restaurante) → `{state, plan_name, trial_ends_at, current_period_end, days_left, limits, usage:{members,tables,products}}` para banners.
+- Abuso no pedido público (dentro de `create_public_order`, sem serviço externo): teto por telefone (ex.: 5 pedidos/hora) e por restaurante (ex.: 60/min) → `RATE_LIMITED`; telefone que já existe NÃO tem e-mail sobrescrito.
+- `save_business_hours(p_restaurant, p_hours jsonb)` atômica (substitui o salvar por diferença), exige `restaurant.settings.manage`.
+- Correções de banco da revisão: `qr_token` fora do Realtime e da leitura de equipe sem `tables.manage` (S-08), demais S-xx de banco, F-35, F-43, F-44.
+
+## Aplicação (P8-APP)
+- Rate limit com adaptador: Upstash REST (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`, via fetch, sem dependência nova) com fallback em memória; chave por IP confiável (na Vercel usar o IP de `x-real-ip`/`x-vercel-forwarded-for`, nunca confiar no primeiro `x-forwarded-for` livre — F-24/S-04).
+- Turnstile: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`; widget no checkout e no cadastro; verificação no servidor antes de `create_public_order`/API pública (token no corpo); sem chaves = desligado.
+- Recuperação de senha: `/esqueci-senha` (resetPasswordForEmail) e `/redefinir-senha`; convite de equipe por e-mail via `auth.admin.inviteUserByEmail` (service role, só servidor) + vínculo existente; mensagens que NÃO enumeram contas.
+- Banners de plano (trial acabando, vencido, limite atingido) em `/app` e `/operacao`; página de plataforma já edita assinaturas.
+- Upload: verificação de magic bytes (F-17); NUL em strings (F-29/F-30); F-37..F-40, F-45, F-48, F-49, S-05..S-12 do app; `emailRedirectTo` sempre de `NEXT_PUBLIC_SITE_URL`.
+- MFA TOTP (Supabase) opcional para qualquer usuário e OBRIGATÓRIO (aal2) para `platform_admins`.
+
+## Divisão
+- **P8-DB**: `supabase/migrations/20260101000131+`. **P8-APP**: `src/**` (exceto supabase/), `.env.example`, `next.config.ts`. **TESTS8** (depois): `tests/**`, `scripts/seed-dev.ts`.
