@@ -7,6 +7,7 @@ export const contactRowSchema = z.object({
   phone: z.string().nullable(),
   address_text: z.string().nullable(),
   storefront_url: z.string().nullable(),
+  storefront_notice: z.string().nullable(),
 });
 export type ContactRow = z.infer<typeof contactRowSchema>;
 

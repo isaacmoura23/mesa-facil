@@ -9,6 +9,7 @@ import { useMenuAction } from "@/components/menu-admin/use-menu-action";
 import { saveContactAction } from "@/modules/restaurant-profile/actions";
 import {
   ADDRESS_MAX,
+  NOTICE_MAX,
   maskPhoneInput,
   whatsappToInput,
 } from "@/modules/restaurant-profile/format";
@@ -27,6 +28,7 @@ export function ContactForm({ slug, contact }: ContactFormProps) {
   const [phone, setPhone] = useState(() => maskPhoneInput(contact.phone ?? ""));
   const [address, setAddress] = useState(contact.address_text ?? "");
   const [storefrontUrl, setStorefrontUrl] = useState(contact.storefront_url ?? "");
+  const [notice, setNotice] = useState(contact.storefront_notice ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -37,12 +39,14 @@ export function ContactForm({ slug, contact }: ContactFormProps) {
     formData.set("phone", phone);
     formData.set("addressText", address);
     formData.set("storefrontUrl", storefrontUrl);
+    formData.set("notice", notice);
 
     const parsed = contactSchema.safeParse({
       whatsapp,
       phone,
       addressText: address,
       storefrontUrl,
+      notice,
     });
     if (!parsed.success) {
       setErrors(fieldErrorsOf(parsed.error));
@@ -66,7 +70,7 @@ export function ContactForm({ slug, contact }: ContactFormProps) {
     <Card aria-labelledby="contact-title">
       <CardHeader
         title={<span id="contact-title">Contato e vitrine</span>}
-        description="Aparecem no seu cardápio online e na API pública, para o cliente falar com você."
+        description="Aparecem no seu cardápio online, para o cliente falar com você."
       />
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -113,6 +117,16 @@ export function ContactForm({ slug, contact }: ContactFormProps) {
           value={storefrontUrl}
           onChange={(event) => setStorefrontUrl(event.target.value)}
           error={errors.storefrontUrl}
+        />
+        <TextField
+          label="Aviso no topo do cardápio"
+          maxLength={NOTICE_MAX}
+          autoComplete="off"
+          placeholder="Ex.: Encomendas de Natal até 20/12"
+          hint={`Opcional. Aparece no topo dos cardápios ligados ao Mesa Fácil (ex.: o da Qi Buxo). Deixe em branco para não mostrar. ${notice.length} de ${NOTICE_MAX} caracteres.`}
+          value={notice}
+          onChange={(event) => setNotice(event.target.value)}
+          error={errors.notice}
         />
         <FormError message={formError} />
         <div className="flex justify-end">
