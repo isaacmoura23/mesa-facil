@@ -7,6 +7,7 @@ import { Ellipsis, X } from "lucide-react";
 import type { NavEntry } from "@/config/navigation";
 import { cn } from "@/lib/utils/cn";
 import { NAV_ICONS } from "./icons";
+import { NavBadge, useNavBadgeDescription } from "./nav-badge";
 import { SidebarNav, isActivePath } from "./sidebar-nav";
 
 const MAX_BAR_ITEMS = 5;
@@ -55,27 +56,8 @@ export function MobileNav({ items, label, drawerFooter }: MobileNavProps) {
       >
         <ul className="mx-auto flex max-w-xl items-stretch">
           {barItems.map((item) => {
-            const Icon = NAV_ICONS[item.icon];
             const active = isActivePath(pathname, item.href);
-            return (
-              <li key={item.href} className="flex min-w-0 flex-1">
-                <Link
-                  href={item.href}
-                  aria-current={active ? "page" : undefined}
-                  className={itemClass(active)}
-                >
-                  <span
-                    className={cn(
-                      "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
-                      active && "bg-accent-soft",
-                    )}
-                  >
-                    <Icon aria-hidden="true" className="size-5" />
-                  </span>
-                  <span className="max-w-full truncate">{item.label}</span>
-                </Link>
-              </li>
-            );
+            return <BarItem key={item.href} item={item} active={active} className={itemClass(active)} />;
           })}
           {needsDrawer ? (
             <li className="flex min-w-0 flex-1">
@@ -137,5 +119,31 @@ export function MobileNav({ items, label, drawerFooter }: MobileNavProps) {
         </dialog>
       ) : null}
     </>
+  );
+}
+
+function BarItem({ item, active, className }: { item: NavEntry; active: boolean; className: string }) {
+  const Icon = NAV_ICONS[item.icon];
+  const badgeText = useNavBadgeDescription(item.badge);
+  return (
+    <li className="flex min-w-0 flex-1">
+      <Link
+        href={item.href}
+        aria-current={active ? "page" : undefined}
+        aria-label={badgeText ? `${item.label}: ${badgeText}` : undefined}
+        className={className}
+      >
+        <span
+          className={cn(
+            "relative flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+            active && "bg-accent-soft",
+          )}
+        >
+          <Icon aria-hidden="true" className="size-5" />
+          <NavBadge badge={item.badge} placement="corner" className="right-0 -top-1" />
+        </span>
+        <span className="max-w-full truncate">{item.label}</span>
+      </Link>
+    </li>
   );
 }
