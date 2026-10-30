@@ -31,12 +31,19 @@ export const viewport: Viewport = {
   ],
 };
 
+/** Aplica a escolha de tema salva antes da primeira pintura (evita piscar). Sem escolha, vale o do aparelho. */
+const THEME_SCRIPT = `try{var t=localStorage.getItem("mf-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang={brand.locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-dvh">
         <ToastProvider>{children}</ToastProvider>
       </body>

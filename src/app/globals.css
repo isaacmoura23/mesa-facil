@@ -40,7 +40,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0d0f12;
     --surface: #15181c;
     --surface-2: #1d2126;
@@ -70,6 +70,43 @@
     --ring: #3fcf9b;
     --shadow-tint: 0 0 0;
   }
+}
+
+/* Escolha manual (botão de tema): vale mesmo se o aparelho estiver no outro modo. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0f12;
+  --surface: #15181c;
+  --surface-2: #1d2126;
+  --line: #2a2f36;
+  --line-strong: #3a414a;
+  --fg: #eceef1;
+  --muted: #a3abb7;
+
+  --accent: #3fcf9b;
+  --accent-hover: #5fdcb0;
+  --accent-fg: #04241a;
+  --accent-soft: #12332a;
+  --accent-soft-fg: #8ee6c3;
+
+  --danger: #f2766b;
+  --danger-hover: #f79189;
+  --danger-fg: #2a0805;
+  --danger-soft: #3a1714;
+  --danger-soft-fg: #ffb4ad;
+
+  --warning-soft: #3a2a0b;
+  --warning-soft-fg: #f4c767;
+
+  --info-soft: #172640;
+  --info-soft-fg: #a9c4f5;
+
+  --ring: #3fcf9b;
+  --shadow-tint: 0 0 0;
 }
 
 @theme inline {

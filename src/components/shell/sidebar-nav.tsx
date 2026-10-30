@@ -58,7 +58,7 @@ export function SidebarNav({ items, label, onNavigate, collapsed = false }: Side
                   <span
                     role="tooltip"
                     aria-hidden="true"
-                    className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-control bg-fg px-3 py-1.5 text-xs font-medium text-surface opacity-0 shadow-[var(--shadow-pop)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+                    className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-control bg-fg px-3 py-1.5 text-xs font-medium text-surface opacity-0 shadow-[var(--shadow-pop)] transition-opacity duration-150 group-hover:opacity-100 group-hover:delay-300 group-focus-visible:opacity-100"
                   >
                     {item.label}
                     {item.readOnly ? " (leitura)" : ""}
