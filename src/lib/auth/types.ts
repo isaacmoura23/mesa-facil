@@ -42,6 +42,9 @@ export const PERMISSIONS = [
   "reports.view",
   "team.manage",
   "restaurant.settings.manage",
+  "cash.view",
+  "cash.operate",
+  "cash.approve",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 

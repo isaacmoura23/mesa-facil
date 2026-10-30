@@ -11,6 +11,7 @@ import {
   LifeBuoy,
   Receipt,
   ScrollText,
+  Wallet,
   Settings,
   Store,
   Users,
@@ -37,4 +38,5 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   subscriptions: CreditCard,
   support: LifeBuoy,
   audit: ScrollText,
+  cash: Wallet,
 };

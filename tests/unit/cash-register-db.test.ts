@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { movementListSchema, requestListSchema, sessionListSchema, summarySchema } from "../../src/modules/cash/types";
 
 /**
  * Caixa (migração 0135) contra um Postgres REAL com as migrações aplicadas.
@@ -241,10 +242,13 @@ suite("caixa: turnos, movimentos, retiradas e permissões", () => {
     expect(sum.r?.pending_withdrawals).toBe(0);
     const expected = 5000 + (2000 + 3790 + 1000 + 1500) - (1500 + 3000 + 800 + 500);
     expect(sum.r?.open_session?.expected_cents).toBe(expected);
+    // contrato com a tela: as respostas reais passam pelos schemas que a tela usa
+    expect(summarySchema.safeParse(sum.r).success).toBe(true);
 
     const list = await rpc(U.manager, "public.cash_list($1, now() - interval '1 day', now() + interval '1 day', null, null, 100, null)", [A]);
     const rows = list.r as unknown as Json[];
     expect(rows.length).toBe(8); // suprimento, despesa, 2 vendas, 3 retiradas, 1 estorno
+    expect(movementListSchema.safeParse(rows).success).toBe(true);
     expect(rows.find((x) => x.kind === "SALE" && x.change_cents === 1210)?.actor_name).toBe("Pessoa cashier");
     expect(rows.filter((x) => x.reversed).length).toBe(1);
     const onlySales = await rpc(U.manager, "public.cash_list($1, now() - interval '1 day', now() + interval '1 day', 'sale', null, 100, null)", [A]);
@@ -271,6 +275,7 @@ suite("caixa: turnos, movimentos, retiradas e permissões", () => {
     expect(supply.r?.movement.session_id).toBeNull();
     const sessions = await rpc(U.manager, "public.cash_list_sessions($1, 10)", [A]);
     expect((sessions.r as unknown as Json[])[0]).toMatchObject({ status: "CLOSED", difference_cents: -90, opened_by_name: "Pessoa cashier" });
+    expect(sessionListSchema.safeParse(sessions.r).success).toBe(true);
   });
 
   it("pedidos de retirada pendentes aparecem para quem vê, com nomes; outro restaurante não vê", async () => {
@@ -279,6 +284,7 @@ suite("caixa: turnos, movimentos, retiradas e permissões", () => {
     const list = pend.r as unknown as Json[];
     expect(list.map((x) => x.id)).toContain(r.r?.request_id);
     expect(list[0]?.requested_by_name).toBe("Pessoa cashier");
+    expect(requestListSchema.safeParse(list).success).toBe(true);
     expect((await rpc(U.otherOwner, "public.cash_list_requests($1, 'PENDING', 50)", [A])).error).toBeTruthy();
     expect((await rpc(U.kitchen, "public.cash_list_requests($1, 'PENDING', 50)", [A])).error).toBeTruthy();
     expect((await rpc(U.manager, "public.cash_list_requests($1, 'xx', 50)", [A])).error).toMatch(/INVALID_STATUS/);

@@ -51,9 +51,9 @@ describe.skipIf(!mod)("regras de entrada por ambiente (src/lib/auth/permissions)
     expect(hasAny(new Set(["a"]), [])).toBe(false);
   });
 
-  it("as permissões operacionais do app são exatamente as 9 do contrato e não se misturam com as administrativas", () => {
+  it("as permissões operacionais do app são exatamente as 11 do contrato (9 + caixa) e não se misturam com as administrativas", () => {
     expect([...OPERATIONAL_PERMISSIONS].sort()).toEqual(
-      ["orders.accept", "orders.cancel", "orders.create", "orders.reject", "orders.update_status", "payments.record", "print.request", "tables.operate", "tabs.manage"].sort(),
+      ["cash.approve", "cash.operate", "orders.accept", "orders.cancel", "orders.create", "orders.reject", "orders.update_status", "payments.record", "print.request", "tables.operate", "tabs.manage"].sort(),
     );
     for (const p of ADMIN_PERMISSIONS) expect((OPERATIONAL_PERMISSIONS as readonly string[]).includes(p)).toBe(false);
   });
