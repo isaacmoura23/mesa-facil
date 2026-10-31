@@ -11,6 +11,7 @@ import {
   LifeBuoy,
   Receipt,
   ScrollText,
+  ShoppingCart,
   Wallet,
   Settings,
   Store,
@@ -39,4 +40,5 @@ export const NAV_ICONS: Record<IconName, LucideIcon> = {
   support: LifeBuoy,
   audit: ScrollText,
   cash: Wallet,
+  sale: ShoppingCart,
 };

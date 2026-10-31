@@ -115,3 +115,12 @@ Quem usa: **caixa** (opera), **gerente** (opera e aprova), **dono** (só vê). C
 - Receber o pagamento de um **pedido** (retirada/entrega): abra o pedido em `/operacao/[slug]/pedidos` → "Receber pagamento".
 
 Pendência conhecida: pagamentos em dinheiro registrados **antes** desta função não viram vendas no caixa (não há retroativo).
+
+## Venda no balcão (PDV) — `/operacao/[slug]/venda`
+Tela para quem atende no balcão (gerente e caixa; exige `orders.create` e `payments.record`).
+- **Produtos:** abas de categoria + grade; um toque adiciona o item (produto com tamanho ou adicional abre uma janela para escolher). Busca por nome.
+- **Pedido:** lista com quantidade, total grande, **Cancelar** (limpa o pedido) e **Receber e finalizar**.
+- **Recebimento (só dinheiro):** valor recebido (botões de cédula ou digitado; vazio = valor exato), troco calculado na hora com a quebra em notas e moedas.
+- **O que a venda grava (uma função só no banco, `create_counter_sale`, tudo ou nada):** pedido `STAFF`/retirada já `CONFIRMED` (aparece na **cozinha** e em **Pedidos**), pagamento `CASH` do total e, se houver turno aberto no caixa, a entrada com o troco no histórico do caixa. Preço sempre recalculado no servidor.
+- **Falha de rede:** repetir o envio reaproveita a mesma chave (idempotência) e não cobra duas vezes.
+- Sem desconto, sem Pix/cartão (o sistema só registra dinheiro por enquanto).
