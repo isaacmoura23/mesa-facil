@@ -289,9 +289,15 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
                   </div>
                   <p className="mt-1 text-sm text-fg">
                     {m.kind === "SALE"
-                      ? [m.order_number !== null ? `Pedido ${m.order_number}` : m.tab_label ? `Comanda ${m.tab_label}` : "Venda", m.tendered_cents !== null ? `recebido ${formatMoney(m.tendered_cents)}, troco ${formatMoney(m.change_cents ?? 0)}` : null].filter(Boolean).join(" · ")
+                      ? m.order_number !== null ? `Pedido ${m.order_number}` : m.tab_label ? `Comanda ${m.tab_label}` : "Venda"
                       : (m.reason ?? "Sem motivo informado")}
                   </p>
+                  {m.kind === "SALE" && m.tendered_cents !== null ? (
+                    <p className="mt-0.5 flex flex-wrap gap-x-4 text-sm text-muted" data-testid="sale-tender-info">
+                      <span>Recebido <strong className="font-semibold tabular-nums text-fg">{formatMoney(m.tendered_cents)}</strong></span>
+                      <span>Troco <strong className="font-semibold tabular-nums text-fg">{formatMoney(m.change_cents ?? 0)}</strong></span>
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-3">
                   <p className={`text-base font-semibold tabular-nums ${m.direction === "IN" ? "text-accent-soft-fg" : "text-danger"}`}>
