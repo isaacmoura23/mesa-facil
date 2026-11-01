@@ -32,6 +32,8 @@ export const summarySchema = z.object({
   by_kind: z.record(z.string(), z.object({ count: cents, amount_cents: cents })).catch({}),
   open_session: openSessionSchema.nullable(),
   pending_withdrawals: cents,
+  /** Vendas em dinheiro de pedidos CANCELADOS que ainda não foram estornadas (o dinheiro segue na gaveta). */
+  pending_refunds: z.object({ count: cents, amount_cents: cents }).catch({ count: 0, amount_cents: 0 }),
 });
 export type CashSummary = z.infer<typeof summarySchema>;
 
@@ -52,6 +54,8 @@ export const movementRowSchema = z.object({
   order_number: z.number().int().nullable(),
   tab_label: z.string().nullable(),
   reversed: z.boolean(),
+  /** Venda de pedido cancelado sem estorno: o gerente precisa devolver o dinheiro e estornar. */
+  pending_refund: z.boolean().catch(false),
 });
 export type MovementRow = z.infer<typeof movementRowSchema>;
 

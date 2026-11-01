@@ -786,17 +786,21 @@ describe("transition_order_status", () => {
     for (const s of ["CONFIRMED", "PREPARING", "READY", "OUT_FOR_DELIVERY", "COMPLETED"]) expect(seen).toContain(s);
   });
 
-  it("cozinha só prepara: aceitar, recusar e cancelar => FORBIDDEN (nada muda)", async () => {
+  it("cozinha prepara e cancela com motivo; aceitar e recusar => FORBIDDEN (nada muda)", async () => {
     const o = await newOrderA("PICKUP");
     const k = (to: string, reason?: string) => as("kitchenA").rpc("transition_order_status", { p_order: o.row.id, p_to: to, p_reason: reason ?? null });
     expectRule(await k("CONFIRMED"), /^FORBIDDEN/);
     expectRule(await k("REJECTED", "zz motivo"), /^FORBIDDEN/);
-    expectRule(await k("CANCELLED", "zz motivo"), /^FORBIDDEN/);
     expect((await orderByKey(o.key)).status).toBe("RECEIVED");
     expectOk(await cashierTo(o.row.id, "CONFIRMED"));
     expectOk(await k("PREPARING"));
-    expectRule(await k("CANCELLED", "zz motivo"), /^FORBIDDEN/);
+    expectRule(await k("CANCELLED"), /REASON_REQUIRED/);
     expectOk(await k("READY"));
+
+    const c = await newOrderA("PICKUP");
+    expectOk(await cashierTo(c.row.id, "CONFIRMED"));
+    expectOk(await as("kitchenA").rpc("transition_order_status", { p_order: c.row.id, p_to: "CANCELLED", p_reason: "zz falta de ingrediente" }));
+    expect((await orderByKey(c.key)).status).toBe("CANCELLED");
   });
 
   it("caixa não cancela (orders.cancel é do gerente); gerente cancela com motivo e o motivo é obrigatório", async () => {

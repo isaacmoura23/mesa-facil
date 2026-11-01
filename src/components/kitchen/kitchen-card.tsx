@@ -32,6 +32,8 @@ type KitchenCardProps = {
   now: number;
   /** Ação de avanço permitida a este usuário (ou null = somente leitura). */
   action: OrderAction | null;
+  /** "Cancelar preparo": só para quem tem orders.cancel e enquanto o pedido está em preparo na cozinha. */
+  cancelAction: OrderAction | null;
   busy: boolean;
   canPrint: boolean;
   /** Mensagem exibida no lugar do botão quando não há ação. */
@@ -40,7 +42,7 @@ type KitchenCardProps = {
   onAction: (order: OperationsOrder, action: OrderAction) => void;
 };
 
-function KitchenCardView({ order, now, action, busy, canPrint, idleHint, unseen, onAction }: KitchenCardProps) {
+function KitchenCardView({ order, now, action, cancelAction, busy, canPrint, idleHint, unseen, onAction }: KitchenCardProps) {
   const waited = elapsedMinutes(order.created_at, now);
   const threshold = LATE_AFTER[order.status];
   const late = threshold !== undefined && waited >= threshold;
@@ -135,6 +137,17 @@ function KitchenCardView({ order, now, action, busy, canPrint, idleHint, unseen,
           </Button>
         ) : idleHint ? (
           <p className="px-1 py-2 text-center text-base font-medium text-muted">{idleHint}</p>
+        ) : null}
+        {cancelAction ? (
+          <Button
+            size="lg"
+            variant="secondary"
+            className="w-full text-danger"
+            disabled={busy}
+            onClick={() => onAction(order, cancelAction)}
+          >
+            Cancelar preparo
+          </Button>
         ) : null}
         <PrintButton
           order={order}
