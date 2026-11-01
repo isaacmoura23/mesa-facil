@@ -78,7 +78,7 @@ const OPERACAO_NAV: readonly NavDefinition[] = [
     badge: { key: "kitchen_queue", anyOf: ["orders.update_status"] },
   },
   { segment: "mesas", label: "Mesas", icon: "tables", anyOf: ["tables.view"] },
-  { segment: "venda", label: "Venda", icon: "sale", anyOf: ["orders.create"] },
+  { segment: "venda", label: "Venda", icon: "sale", anyOf: ["payments.record"] },
   { segment: "caixa", label: "Caixa", icon: "cash", anyOf: ["cash.view"] },
   { segment: "comandas", label: "Comandas", icon: "tabs", anyOf: ["tabs.view"] },
   { segment: "historico", label: "Histórico", icon: "history", anyOf: ["orders.view"] },

@@ -58,6 +58,12 @@ export function RestaurantHero({ menu }: { menu: PublicMenu }) {
         ) : null}
       </ul>
 
+      {restaurant.notice ? (
+        <Alert tone="info" className="mt-4">
+          {restaurant.notice}
+        </Alert>
+      ) : null}
+
       {!open ? (
         <Alert tone="warning" className="mt-4">
           {paused

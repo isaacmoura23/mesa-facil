@@ -219,7 +219,8 @@ export function CounterSaleView({ slug, restaurantId }: CounterSaleViewProps) {
           </ul>
         )}
 
-        <div className="sticky bottom-0 -mx-1 border-t border-line bg-bg/95 p-3 backdrop-blur lg:hidden">
+        {/* No celular a navegação inferior é fixa (≈ 5rem + área segura): a barra do pedido fica ACIMA dela, senão o toque cai em "Mesas". */}
+        <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] -mx-1 rounded-card border border-line bg-bg/95 p-3 shadow-card backdrop-blur lg:hidden">
           <Button size="lg" fullWidth onClick={() => setShowCart(true)} className="justify-between">
             <span className="inline-flex items-center gap-2">
               <ShoppingBag aria-hidden="true" className="size-4" />
@@ -375,20 +376,20 @@ function ProductTile({ product, count, onPick }: { product: MenuProduct; count: 
           </span>
         ) : null}
         <span className="flex flex-1 flex-col gap-1 p-3">
-          <span className="line-clamp-2 text-sm font-semibold uppercase leading-snug text-fg">{product.name}</span>
+          <span className={cn("line-clamp-2 text-sm font-semibold uppercase leading-snug text-fg", count > 0 && "pr-8")}>{product.name}</span>
           <span className="mt-auto text-sm font-semibold tabular-nums text-accent">
             {hasVariants(product) ? <span className="mr-1 text-xs font-normal text-muted">a partir de</span> : null}
             {formatCents(product.priceCents)}
           </span>
+          {!orderable ? (
+            <Badge tone="neutral" className="self-start">
+              Indisponível
+            </Badge>
+          ) : null}
         </span>
         {count > 0 ? (
           <Badge tone="accent" className="absolute right-2 top-2">
             {count}
-          </Badge>
-        ) : null}
-        {!orderable ? (
-          <Badge tone="neutral" className="absolute right-2 top-2">
-            Indisponível
           </Badge>
         ) : null}
       </button>

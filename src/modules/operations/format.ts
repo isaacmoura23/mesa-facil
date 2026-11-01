@@ -59,11 +59,17 @@ export function formatPhone(raw: string | null | undefined): string {
   return raw;
 }
 
+/** 62755000 -> 62755-000 (se não tiver 8 dígitos, devolve como veio). */
+export function formatCep(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  return digits.length === 8 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : raw;
+}
+
 export function formatAddress(address: DeliveryAddress | null | undefined): string[] {
   if (!address) return [];
   const line1 = [address.street, address.number].filter(Boolean).join(", ");
   const line2 = [address.neighborhood, address.city].filter(Boolean).join(" - ");
-  return [line1, line2, address.postal_code ? `CEP ${address.postal_code}` : ""].filter(
+  return [line1, line2, address.postal_code ? `CEP ${formatCep(address.postal_code)}` : ""].filter(
     (line): line is string => Boolean(line),
   );
 }
