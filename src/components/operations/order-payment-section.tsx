@@ -12,6 +12,13 @@ import { PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/modules/tab-billing
 
 type PaymentRow = { id: string; method: PaymentMethod; amount_cents: number; status: string; paid_at: string | null };
 
+/** O que o cliente declarou no pedido vira a forma já marcada (o caixa só confere); sem declaração, dinheiro. */
+function methodFromIntent(intent: string | null | undefined): PaymentMethod {
+  if (intent === "PIX") return "PIX";
+  if (intent === "CARD") return "CREDIT";
+  return "CASH";
+}
+
 type Props = {
   order: OperationsOrder;
   restaurantId: string;
@@ -89,6 +96,7 @@ export function OrderPaymentSection({ order, restaurantId, onRecorded }: Props) 
           supabase={supabase}
           orderId={order.id}
           remainingCents={remaining}
+          initialMethod={methodFromIntent(order.payment_method_intent)}
           onStale={load}
           onRecorded={async (message) => {
             setNotice(message);

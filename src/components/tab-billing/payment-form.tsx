@@ -20,6 +20,8 @@ type PaymentFormProps = {
   tabId?: string;
   orderId?: string;
   remainingCents: number;
+  /** Forma já selecionada ao abrir (padrão: dinheiro, a mais comum no balcão). */
+  initialMethod?: PaymentMethod;
   /** Relê o saldo e avisa o chamador quando o estado mudou por outro caminho (ex.: OVERPAYMENT). */
   onStale: () => Promise<void>;
   /** Pagamento gravado: o painel guarda o aviso (troco!) mesmo que a conta fique quitada e o formulário suma. */
@@ -37,8 +39,8 @@ function newAttemptKey(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function PaymentForm({ supabase, tabId, orderId, remainingCents, onStale, onRecorded, onAttempt }: PaymentFormProps) {
-  const [method, setMethod] = useState<PaymentMethod>("PIX");
+export function PaymentForm({ supabase, tabId, orderId, remainingCents, initialMethod = "CASH", onStale, onRecorded, onAttempt }: PaymentFormProps) {
+  const [method, setMethod] = useState<PaymentMethod>(initialMethod);
   // null = acompanha o saldo atual (padrão = saldo restante).
   const [amountText, setAmountText] = useState<string | null>(null);
   const [tenderedText, setTenderedText] = useState("");

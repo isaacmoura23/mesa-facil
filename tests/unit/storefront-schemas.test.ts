@@ -53,7 +53,7 @@ const menuJson = (over: Record<string, unknown> = {}) => ({
 describe("parsePublicMenu", () => {
   it("converte o JSON de public_menu no modelo da UI", () => {
     const m = parsePublicMenu(menuJson())!;
-    expect(m.restaurant).toEqual({ name: "DEMO A", slug: "demo-a", logoPath: null, timezone: "America/Sao_Paulo", contact: null, storefrontUrl: null });
+    expect(m.restaurant).toEqual({ name: "DEMO A", slug: "demo-a", logoPath: null, timezone: "America/Sao_Paulo", contact: null, storefrontUrl: null, notice: null });
     expect(m.isOpenNow).toBe(true);
     expect(m.settings).toMatchObject({ acceptsOrders: true, prepTimeMinutes: 30, minOrderCents: 0, pickupInstructions: null });
     expect(m.settings.fulfillmentTypes).toEqual(["DELIVERY", "PICKUP", "DINE_IN"]);

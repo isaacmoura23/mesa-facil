@@ -113,7 +113,7 @@ describe("operations/format", () => {
     expect(formatAddress(null)).toEqual([]);
     expect(formatAddress(undefined)).toEqual([]);
     expect(formatAddress({})).toEqual([]);
-    expect(formatAddress({ street: "Rua A", number: "10", neighborhood: "Centro", city: "SP", postal_code: "01310100" })).toEqual(["Rua A, 10", "Centro - SP", "CEP 01310100"]);
+    expect(formatAddress({ street: "Rua A", number: "10", neighborhood: "Centro", city: "SP", postal_code: "01310100" })).toEqual(["Rua A, 10", "Centro - SP", "CEP 01310-100"]);
     expect(formatAddress({ street: "Rua A", city: "SP" })).toEqual(["Rua A", "SP"]);
     expect(formatAddress({ number: "10" })).toEqual(["10"]);
   });

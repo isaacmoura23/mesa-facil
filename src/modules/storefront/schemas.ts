@@ -107,6 +107,7 @@ const restaurantSchema = z.object({
   timezone: z.string().nullable().catch(null),
   contact: contactSchema.optional(),
   storefront_url: z.string().nullable().optional().catch(null),
+  notice: z.string().nullable().optional().catch(null),
 });
 
 const settingsSchema = z
@@ -198,6 +199,8 @@ export type PublicMenu = {
     contact: RestaurantContact | null;
     /** URL https da vitrine personalizada, quando houver. */
     storefrontUrl: string | null;
+    /** Aviso fixo do topo do cardápio (escrito pelo restaurante). */
+    notice: string | null;
   };
   settings: {
     acceptsOrders: boolean;
@@ -349,6 +352,7 @@ export function parsePublicMenu(raw: unknown): PublicMenu | null {
       timezone: restaurant.timezone,
       contact: normalizeContact(restaurant.contact),
       storefrontUrl: normalizeStorefrontUrl(restaurant.storefront_url),
+      notice: restaurant.notice?.trim() || null,
     },
     settings: {
       acceptsOrders: settings.accepts_orders ?? true,
