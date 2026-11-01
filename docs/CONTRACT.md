@@ -14,7 +14,8 @@ Idioma da UI: PT-BR. Moeda: BRL, valores em centavos (int). Fuso padrão: `Ameri
 
 `orders.view`, `orders.create`, `orders.accept`, `orders.reject`, `orders.update_status`, `orders.cancel`,
 `menu.manage`, `tables.view`, `tables.manage` (configurar/cadastrar mesas), `tables.operate` (mudar estado operacional),
-`tabs.view`, `tabs.manage`, `payments.record`, `print.request`, `reports.view`, `team.manage`, `restaurant.settings.manage`
+`tabs.view`, `tabs.manage`, `payments.record`, `print.request`, `reports.view`, `team.manage`, `restaurant.settings.manage`,
+`cash.view`, `cash.operate` (abrir/fechar turno, entradas, saídas, pedir retirada), `cash.approve` (aprovar retirada, estornar)
 
 ### Matriz padrão (tabela `role_permissions`)
 
@@ -24,7 +25,7 @@ Idioma da UI: PT-BR. Moeda: BRL, valores em centavos (int). Fuso padrão: `Ameri
 | orders.create | – | ✔ | ✔ | – | ✔ |
 | orders.accept / reject | – | ✔ | ✔ | – | – |
 | orders.update_status | – | ✔ | ✔ | ✔ | – |
-| orders.cancel | – | ✔ | – | – | – |
+| orders.cancel | – | ✔ | – | ✔ | – |
 | menu.manage | ✔ | ✔ | – | – | – |
 | tables.view | ✔ | ✔ | ✔ | – | ✔ |
 | tables.manage | ✔ | ✔ | – | – | – |
@@ -36,9 +37,12 @@ Idioma da UI: PT-BR. Moeda: BRL, valores em centavos (int). Fuso padrão: `Ameri
 | reports.view | ✔ | ✔ | – | – | – |
 | team.manage | ✔ | – | – | – | – |
 | restaurant.settings.manage | ✔ | ✔ | – | – | – |
+| cash.view | ✔ (somente leitura) | ✔ | ✔ | – | – |
+| cash.operate | – | ✔ | ✔ | – | – |
+| cash.approve | – | ✔ | – | – | – |
 
 **Regra de separação:** o papel `owner` NUNCA recebe permissões operacionais (`orders.create|accept|reject|update_status|cancel`,
-`tables.operate`, `tabs.manage`, `payments.record`, `print.request`), nem por override. O dono atribui/revoga permissões
+`tables.operate`, `tabs.manage`, `payments.record`, `print.request`, `cash.operate`, `cash.approve`), nem por override. O dono atribui/revoga permissões
 operacionais apenas a membros não-owner via `membership_permission_overrides`.
 
 ## Funções SQL de apoio (schema `public`, STABLE, `SECURITY DEFINER`, `search_path = ''` ou fixo)

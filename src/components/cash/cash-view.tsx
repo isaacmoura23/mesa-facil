@@ -172,6 +172,14 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
   return (
     <div className="flex flex-col gap-6">
       {error ? <Alert tone="danger" title="Não foi possível atualizar o caixa">{error}</Alert> : null}
+      {summary && summary.pending_refunds.count > 0 ? (
+        <Alert tone="warning" title={`${summary.pending_refunds.count} venda(s) de pedido cancelado aguardando estorno`}>
+          {formatMoney(summary.pending_refunds.amount_cents)} continuam na gaveta como venda, mas os pedidos foram cancelados.{" "}
+          {canApprove
+            ? "Devolva o dinheiro ao cliente e use o botão Estornar na venda, no histórico abaixo."
+            : "Avise o gerente: só ele pode estornar."}
+        </Alert>
+      ) : null}
 
       {/* Turno e ações */}
       <Card aria-labelledby="turno-titulo">
@@ -285,6 +293,7 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={KIND_TONE[m.kind]}>{KIND_LABELS[m.kind]}</Badge>
                     {m.reversed ? <Badge tone="danger">Estornado</Badge> : null}
+                    {m.pending_refund ? <Badge tone="warning">Pedido cancelado: estornar</Badge> : null}
                     <span className="text-xs text-muted">{formatDateTime(m.created_at)} · {m.actor_name}</span>
                   </div>
                   <p className="mt-1 text-sm text-fg">
@@ -303,7 +312,7 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
                   <p className={`text-base font-semibold tabular-nums ${m.direction === "IN" ? "text-accent-soft-fg" : "text-danger"}`}>
                     {m.direction === "IN" ? "+" : "−"}{formatMoney(m.amount_cents)}
                   </p>
-                  {canApprove && REVERSIBLE.includes(m.kind) && !m.reversed ? (
+                  {canApprove && (REVERSIBLE.includes(m.kind) || m.pending_refund) && !m.reversed ? (
                     <Button size="sm" variant="ghost" onClick={() => setDialog({ reverse: m })}>Estornar</Button>
                   ) : null}
                 </div>
@@ -345,7 +354,7 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
       <MoneyReasonDialog open={dialog === "expense"} onClose={close} title="Saída de dinheiro" description="Pagamento feito com dinheiro do caixa (ex.: compra de gelo, fornecedor)." submitLabel="Registrar saída" reasonLabel="Motivo" reasonHint="Obrigatório. Ex.: compra de gelo." reasonRequired onSubmit={(v, reason, key) => cash.recordMovement(supabase, restaurantId, "EXPENSE", v, reason, key).then(() => reload())} />
       <MoneyReasonDialog open={dialog === "request"} onClose={close} title="Pedir retirada" description="O gerente precisa aprovar para o dinheiro sair do caixa." submitLabel="Enviar pedido" reasonLabel="Motivo" reasonHint="Ex.: guardar no cofre." reasonRequired onSubmit={(v, reason, key) => cash.requestWithdrawal(supabase, restaurantId, v, reason, key).then(() => reload())} />
       <MoneyReasonDialog open={dialog === "direct"} onClose={close} title="Retirar dinheiro" description="Retirada feita por você, como gerente. Fica registrada com o seu nome." submitLabel="Registrar retirada" reasonLabel="Motivo" reasonHint="Ex.: depósito no banco." reasonRequired onSubmit={(v, reason, key) => cash.withdrawDirect(supabase, restaurantId, v, reason, key).then(() => reload())} />
-      <ReasonDialog open={typeof dialog === "object" && dialog !== null && "reverse" in dialog} onClose={close} title="Estornar lançamento" description={typeof dialog === "object" && dialog !== null && "reverse" in dialog ? `${KIND_LABELS[dialog.reverse.kind]} de ${formatMoney(dialog.reverse.amount_cents)}. O lançamento original fica no histórico e entra um lançamento contrário.` : undefined} label="Motivo do estorno" required submitLabel="Estornar" onSubmit={(reason) => (typeof dialog === "object" && dialog !== null && "reverse" in dialog ? cash.reverseMovement(supabase, dialog.reverse.id, reason).then(() => reload()) : Promise.resolve())} />
+      <ReasonDialog open={typeof dialog === "object" && dialog !== null && "reverse" in dialog} onClose={close} title="Estornar lançamento" description={typeof dialog === "object" && dialog !== null && "reverse" in dialog ? `${KIND_LABELS[dialog.reverse.kind]} de ${formatMoney(dialog.reverse.amount_cents)}. O lançamento original fica no histórico e entra um lançamento contrário.${dialog.reverse.kind === "SALE" ? " Devolva o dinheiro ao cliente." : ""}` : undefined} label="Motivo do estorno" required submitLabel="Estornar" onSubmit={(reason) => (typeof dialog === "object" && dialog !== null && "reverse" in dialog ? cash.reverseMovement(supabase, dialog.reverse.id, reason).then(() => reload()) : Promise.resolve())} />
       <ReasonDialog open={typeof dialog === "object" && dialog !== null && "reject" in dialog} onClose={close} title="Recusar retirada" label="Observação (opcional)" required={false} submitLabel="Recusar" onSubmit={(note) => (typeof dialog === "object" && dialog !== null && "reject" in dialog ? cash.decideWithdrawal(supabase, dialog.reject.id, "REJECT", note || null).then(() => reload()) : Promise.resolve())} />
       <FormDialog open={dialog === "calc"} title="Calculadora de troco" description="Só calcula; não registra nada no caixa." onClose={close}>
         <ChangeCalculator onClose={close} />

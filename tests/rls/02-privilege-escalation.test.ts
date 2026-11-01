@@ -358,15 +358,16 @@ describe("matriz de permissões efetiva = contrato (docs/CONTRACT.md)", () => {
     "orders.view", "orders.create", "orders.accept", "orders.reject", "orders.update_status", "orders.cancel",
     "menu.manage", "tables.view", "tables.manage", "tables.operate", "tabs.view", "tabs.manage",
     "payments.record", "print.request", "reports.view", "team.manage", "restaurant.settings.manage",
+    "cash.view", "cash.operate", "cash.approve",
   ];
   const MATRIX: Record<string, string[]> = {
-    ownerA: ["orders.view", "menu.manage", "tables.view", "tables.manage", "tabs.view", "reports.view", "team.manage", "restaurant.settings.manage"],
+    ownerA: ["orders.view", "menu.manage", "tables.view", "tables.manage", "tabs.view", "reports.view", "team.manage", "restaurant.settings.manage", "cash.view"],
     managerA: ALL.filter((p) => p !== "team.manage"),
-    cashierA: ["orders.view", "orders.create", "orders.accept", "orders.reject", "orders.update_status", "tables.view", "tables.operate", "tabs.view", "tabs.manage", "payments.record", "print.request"],
-    kitchenA: ["orders.view", "orders.update_status", "print.request"],
+    cashierA: ["orders.view", "orders.create", "orders.accept", "orders.reject", "orders.update_status", "tables.view", "tables.operate", "tabs.view", "tabs.manage", "payments.record", "print.request", "cash.view", "cash.operate"],
+    kitchenA: ["orders.view", "orders.update_status", "orders.cancel", "print.request"],
     waiterA: ["orders.view", "orders.create", "tables.view", "tables.operate", "tabs.view", "tabs.manage", "print.request"],
   };
-  const OPERATIONAL = ["orders.create", "orders.accept", "orders.reject", "orders.update_status", "orders.cancel", "tables.operate", "tabs.manage", "payments.record", "print.request"];
+  const OPERATIONAL = ["orders.create", "orders.accept", "orders.reject", "orders.update_status", "orders.cancel", "tables.operate", "tabs.manage", "payments.record", "print.request", "cash.operate", "cash.approve"];
 
   for (const [who, expected] of Object.entries(MATRIX)) {
     it(`${who}: my_permissions e has_permission batem com a matriz`, async () => {

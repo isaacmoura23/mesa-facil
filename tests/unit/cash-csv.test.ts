@@ -5,7 +5,7 @@ import type { MovementRow } from "../../src/modules/cash/types";
 const base: MovementRow = {
   id: "1", session_id: null, kind: "SALE", direction: "IN", amount_cents: 3790, tendered_cents: 5000, change_cents: 1210,
   reason: null, payment_id: "p", reverses: null, created_at: "2026-10-30T15:00:00.000Z", created_by: "u",
-  actor_name: "Maria", order_number: 12, tab_label: null, reversed: false,
+  actor_name: "Maria", order_number: 12, tab_label: null, reversed: false, pending_refund: false,
 };
 
 describe("buildCashCsv", () => {

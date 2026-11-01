@@ -13,7 +13,7 @@ import { dockerAvailable, psql } from "../helpers/psql";
 
 const A = () => world().restaurants.a;
 const ROLES = ["owner", "manager", "cashier", "kitchen", "waiter"] as const;
-const OPERATIONAL = ["orders.create", "orders.accept", "orders.reject", "orders.update_status", "orders.cancel", "tables.operate", "tabs.manage", "payments.record", "print.request"];
+const OPERATIONAL = ["orders.create", "orders.accept", "orders.reject", "orders.update_status", "orders.cancel", "tables.operate", "tabs.manage", "payments.record", "print.request", "cash.operate", "cash.approve"];
 
 function parseContractMatrix(): Record<string, Record<(typeof ROLES)[number], boolean>> {
   const md = readFileSync(path.join(projectRoot(), "docs", "CONTRACT.md"), "utf8");
@@ -40,7 +40,7 @@ function parseContractMatrix(): Record<string, Record<(typeof ROLES)[number], bo
 describe("contrato x banco x app", () => {
   it("role_permissions no banco == matriz de docs/CONTRACT.md (linha a linha)", async () => {
     const matrix = parseContractMatrix();
-    expect(Object.keys(matrix)).toHaveLength(17);
+    expect(Object.keys(matrix)).toHaveLength(20);
     const db = await admin().from("role_permissions").select("role,permission_key");
     expectOk(db);
     const have = new Set(rows(db).map((r) => `${r.role}:${r.permission_key}`));
@@ -49,10 +49,10 @@ describe("contrato x banco x app", () => {
     expect([...have].sort()).toEqual([...want].sort());
   });
 
-  it("catálogo permissions: 17 chaves; is_operational == as 9 permissões operacionais do contrato", async () => {
+  it("catálogo permissions: 20 chaves; is_operational == as 11 permissões operacionais do contrato", async () => {
     const res = await as("ownerA").from("permissions").select("key,is_operational");
     expectOk(res);
-    expect(rows(res)).toHaveLength(17);
+    expect(rows(res)).toHaveLength(20);
     expect(rows(res).filter((p) => p.is_operational).map((p) => p.key).sort()).toEqual([...OPERATIONAL].sort());
   });
 

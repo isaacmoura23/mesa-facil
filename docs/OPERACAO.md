@@ -41,7 +41,8 @@ Perfil, contato, logo e domínios da API: `/app/[slug]/restaurante`.
 ## 6. Pedidos em tempo real e cozinha (`/operacao/[slug]`)
 - **Pedidos** (`/pedidos`): chegam por Realtime com alerta sonoro (preferência por usuário). Caixa aceita ou recusa (recusa
   exige motivo); gerente cancela com motivo. Transições válidas são impostas pelo banco.
-- **Cozinha** (`/cozinha`): só avança PREPARING -> READY. Entrega/retirada conclui o pedido.
+- **Cozinha** (`/cozinha`): avança PREPARING -> READY e pode **Cancelar preparo** (pedido já aceito, ainda não pronto), sempre com motivo, que fica no histórico com o nome de quem cancelou. Pedido novo ainda não aceito não é cancelado pela cozinha (o atendimento recusa). Entrega/retirada conclui o pedido.
+  - **Pedido já pago:** cancelar NÃO devolve o dinheiro. O Caixa mostra "Pedido cancelado: estornar" (e um aviso no topo); o gerente devolve o dinheiro ao cliente e usa **Estornar** na venda. Só venda de pedido cancelado pode ser estornada.
 - **Histórico** (`/historico`): consulta e exportação CSV.
 - O dono vê tudo em `/app/[slug]/pedidos`, sem poder alterar.
 

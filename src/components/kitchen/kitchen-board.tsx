@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils/cn";
 import { ConnectionIndicator } from "@/components/operations/connection-indicator";
+import { ReasonDialog } from "@/components/operations/reason-dialog";
 import { SoundControls } from "@/components/operations/sound-controls";
 import { useAlertSound } from "@/modules/operations/use-alert-sound";
 import { useOrderActions, type OrderAction } from "@/modules/operations/use-order-actions";
@@ -39,6 +40,10 @@ type Column = {
 
 /** O que a cozinha pode fazer: aceitar (se tiver permissão), iniciar preparo e marcar pronto. */
 const KITCHEN_TARGETS: readonly OrderStatus[] = ["CONFIRMED", "PREPARING", "READY"];
+
+/** Cancelar preparo: só depois do aceite (pedido novo ainda não aceito é recusado pelo atendimento) e antes de ficar pronto. */
+const CANCELABLE_STATUSES: readonly OrderStatus[] = ["CONFIRMED", "PREPARING"];
+const CANCEL_SUGGESTIONS = ["Falta de ingrediente", "Erro no pedido", "Cliente desistiu", "Problema na cozinha"];
 
 function sortOldestFirst(list: OperationsOrder[]): OperationsOrder[] {
   return [...list].sort(
@@ -132,12 +137,30 @@ export function KitchenBoard({ restaurantId, restaurantName, permissions }: Kitc
     [actionsFor],
   );
 
+  const cancelAction = useCallback(
+    (order: OperationsOrder): OrderAction | null =>
+      CANCELABLE_STATUSES.includes(order.status)
+        ? (actionsFor(order).find((action) => action.kind === "cancel") ?? null)
+        : null,
+    [actionsFor],
+  );
+
+  const [reasonTarget, setReasonTarget] = useState<{ orderId: string; action: OrderAction } | null>(null);
+  const reasonOrder = reasonTarget ? (feed.orders.find((order) => order.id === reasonTarget.orderId) ?? null) : null;
+
   const handleAction = useCallback(
     (order: OperationsOrder, action: OrderAction) => {
-      void run(order, action);
+      if (action.needsReason) setReasonTarget({ orderId: order.id, action });
+      else void run(order, action);
     },
     [run],
   );
+
+  async function confirmReason(reason: string) {
+    if (!reasonTarget || !reasonOrder) return;
+    const ok = await run(reasonOrder, reasonTarget.action, reason);
+    if (ok) setReasonTarget(null);
+  }
 
   function hintFor(order: OperationsOrder): string | null {
     if (order.status === "RECEIVED") return "Aguardando o aceite do atendimento";
@@ -316,6 +339,7 @@ export function KitchenBoard({ restaurantId, restaurantName, permissions }: Kitc
                       order={order}
                       now={now}
                       action={kitchenAction(order)}
+                      cancelAction={cancelAction(order)}
                       busy={pending.has(order.id)}
                       canPrint={permissions.print}
                       idleHint={kitchenAction(order) ? null : hintFor(order)}
@@ -329,6 +353,21 @@ export function KitchenBoard({ restaurantId, restaurantName, permissions }: Kitc
           );
         })}
       </div>
+
+      <ReasonDialog
+        open={reasonTarget !== null && reasonOrder !== null}
+        title={`Cancelar preparo do pedido #${reasonOrder?.order_number ?? ""}`}
+        description={
+          reasonOrder?.payment_status === "PAID"
+            ? "Este pedido já foi pago. Cancelar não devolve o dinheiro: o gerente precisa estornar a venda em Caixa. O motivo fica registrado no histórico."
+            : "O motivo fica registrado no histórico e é mostrado ao cliente no acompanhamento."
+        }
+        confirmLabel="Cancelar preparo"
+        suggestions={CANCEL_SUGGESTIONS}
+        pending={reasonOrder ? pending.has(reasonOrder.id) : false}
+        onConfirm={(reason) => void confirmReason(reason)}
+        onClose={() => setReasonTarget(null)}
+      />
     </div>
   );
 }

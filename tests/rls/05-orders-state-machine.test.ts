@@ -63,7 +63,7 @@ describe("caixa (orders.accept / orders.reject / orders.update_status)", () => {
   });
 });
 
-describe("cozinha (orders.update_status apenas): PREPARING / READY, nada além", () => {
+describe("cozinha (orders.update_status + orders.cancel): PREPARING / READY e cancelar com motivo", () => {
   it("CONFIRMED -> PREPARING -> READY é permitido", async () => {
     const o = await makeOrder(cleanup, A().id, { status: "CONFIRMED" });
     expectOk(await update("kitchenA", o.id, { status: "PREPARING" }));
@@ -71,17 +71,21 @@ describe("cozinha (orders.update_status apenas): PREPARING / READY, nada além",
     expect((await orderRow(o.id)).status).toBe("READY");
   });
 
-  it("não aceita, não recusa, não cancela e não pula etapas", async () => {
+  it("não aceita, não recusa e não pula etapas", async () => {
     const received = await makeOrder(cleanup, A().id, { status: "RECEIVED" });
     expectRule(await update("kitchenA", received.id, { status: "CONFIRMED" }), /FORBIDDEN/);
     expectRule(await update("kitchenA", received.id, { status: "REJECTED", status_reason: "cozinha recusou" }), /FORBIDDEN/);
-    expectRule(await update("kitchenA", received.id, { status: "CANCELLED", status_reason: "cozinha cancelou" }), /FORBIDDEN/);
     expectRule(await update("kitchenA", received.id, { status: "PREPARING" }), /ORDER_INVALID_TRANSITION/);
     expect((await orderRow(received.id)).status).toBe("RECEIVED");
 
+  });
+
+  it("cancela o preparo com motivo obrigatório (orders.cancel)", async () => {
     const preparing = await makeOrder(cleanup, A().id, { status: "PREPARING" });
-    expectRule(await update("kitchenA", preparing.id, { status: "CANCELLED", status_reason: "x" }), /FORBIDDEN/);
+    expectRule(await update("kitchenA", preparing.id, { status: "CANCELLED" }), /REASON_REQUIRED/);
     expect((await orderRow(preparing.id)).status).toBe("PREPARING");
+    expectOk(await update("kitchenA", preparing.id, { status: "CANCELLED", status_reason: "Falta de ingrediente" }));
+    expect(await orderRow(preparing.id)).toMatchObject({ status: "CANCELLED", status_reason: "Falta de ingrediente" });
   });
 });
 
