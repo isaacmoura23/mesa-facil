@@ -9,6 +9,7 @@ import { buildAppNav, buildOperacaoNav } from "@/config/navigation";
 import { buttonStyles } from "@/components/ui/button";
 import { SupabaseNotConfigured } from "@/components/supabase-not-configured";
 import { RestaurantSwitcher } from "./restaurant-switcher";
+import { NavBadgesProvider } from "./nav-badges-provider";
 import { ShellFrame } from "./shell-frame";
 import { UserMenu } from "./user-menu";
 
@@ -53,7 +54,11 @@ export async function RestaurantAreaShell({
       href: homePathFor(item.slug, item.role),
     }));
 
+  // Selos de contagem só aparecem para quem pode agir sobre o que é contado (já filtrado no menu).
+  const badgeKeys = [...new Set(nav.flatMap((entry) => (entry.badge ? [entry.badge] : [])))];
+
   return (
+    <NavBadgesProvider restaurantId={restaurant.restaurant_id} keys={badgeKeys}>
     <ShellFrame
       areaLabel={AREA_LABEL[area]}
       nav={nav}
@@ -85,5 +90,6 @@ export async function RestaurantAreaShell({
     >
       {children}
     </ShellFrame>
+    </NavBadgesProvider>
   );
 }
