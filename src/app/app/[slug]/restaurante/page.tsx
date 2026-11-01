@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
-import { ApiInfo } from "@/components/restaurant-profile/api-info";
 import { EstablishmentForm } from "@/components/restaurant-profile/establishment-form";
 import { ContactForm } from "@/components/restaurant-profile/contact-form";
 import { OriginsEditor } from "@/components/restaurant-profile/origins-editor";
@@ -10,22 +8,11 @@ import { Alert } from "@/components/ui/alert";
 import { buttonStyles } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
-import { getPublicEnvStatus } from "@/lib/env";
 import { getRestaurantProfile } from "@/modules/restaurant-profile/queries";
 
 export const metadata: Metadata = { title: "Restaurante" };
 
 const LOAD_ERROR = "Tente atualizar a página. Se continuar, avise o suporte.";
-
-/** Origem do SaaS para montar a URL da API: variável pública ou o host da requisição. */
-async function resolveBaseUrl(): Promise<string> {
-  const status = getPublicEnvStatus();
-  if (status.ok && status.env.siteUrl) return status.env.siteUrl.replace(/\/+$/, "");
-  const list = await headers();
-  const host = list.get("x-forwarded-host") ?? list.get("host") ?? "localhost:3000";
-  const protocol = list.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${protocol}://${host}`;
-}
 
 export default async function Page({ params }: PageProps<"/app/[slug]/restaurante">) {
   const { slug } = await params;
@@ -34,16 +21,13 @@ export default async function Page({ params }: PageProps<"/app/[slug]/restaurant
     permission: "restaurant.settings.manage",
   });
   const { restaurant } = access;
-  const [profile, baseUrl] = await Promise.all([
-    getRestaurantProfile(restaurant.restaurant_id),
-    resolveBaseUrl(),
-  ]);
+  const profile = await getRestaurantProfile(restaurant.restaurant_id);
 
   return (
     <>
       <PageHeader
         title="Restaurante"
-        description="Dados do estabelecimento, contato, vitrine e acesso à API do seu cardápio."
+        description="Dados do estabelecimento, contato, vitrine e domínios autorizados."
         actions={
           <Link
             href={`/r/${restaurant.slug}`}
@@ -88,8 +72,6 @@ export default async function Page({ params }: PageProps<"/app/[slug]/restaurant
             {LOAD_ERROR} A edição foi bloqueada para não apagar os domínios cadastrados.
           </Alert>
         )}
-
-        <ApiInfo baseUrl={baseUrl} slug={restaurant.slug} />
       </div>
     </>
   );

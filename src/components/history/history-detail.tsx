@@ -18,7 +18,15 @@ import {
   type OperationsOrder,
 } from "@/modules/operations/types";
 import { useOrderHistory } from "@/modules/operations/use-order-history";
-import { documentLabel, fetchPrintJobs, PRINT_STATUS_LABELS, type PrintJobEntry } from "./history-model";
+import { PAYMENT_METHOD_LABELS as RECORDED_METHOD_LABELS } from "@/modules/tab-billing/types";
+import {
+  documentLabel,
+  fetchOrderPayments,
+  fetchPrintJobs,
+  PRINT_STATUS_LABELS,
+  type OrderPaymentEntry,
+  type PrintJobEntry,
+} from "./history-model";
 
 type HistoryDetailProps = {
   restaurantId: string;
@@ -74,6 +82,7 @@ function DetailBody({ restaurantId, orderId, onClose }: { restaurantId: string; 
   const [state, setState] = useState<OrderState>({ order: null, failed: false, done: false });
   const [jobs, setJobs] = useState<PrintJobEntry[] | null>(null);
   const [jobsFailed, setJobsFailed] = useState(false);
+  const [payments, setPayments] = useState<OrderPaymentEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +93,12 @@ function DetailBody({ restaurantId, orderId, onClose }: { restaurantId: string; 
       .catch(() => {
         if (!cancelled) setState({ order: null, failed: true, done: true });
       });
+    // Sem permissão ou falha: a seção de pagamentos registrados simplesmente não aparece.
+    fetchOrderPayments(supabase, restaurantId, orderId)
+      .then((rows) => {
+        if (!cancelled) setPayments(rows);
+      })
+      .catch(() => undefined);
     fetchPrintJobs(supabase, restaurantId, orderId)
       .then((rows) => {
         if (!cancelled) setJobs(rows);
@@ -231,6 +246,38 @@ function DetailBody({ restaurantId, orderId, onClose }: { restaurantId: string; 
                 Situação: {PAYMENT_STATUS_LABELS[order.payment_status] ?? order.payment_status}.
               </p>
             </Section>
+
+            {payments.length > 0 ? (
+              <Section title="Pagamentos registrados">
+                <ul className="flex flex-col gap-3" aria-label="Pagamentos registrados">
+                  {payments.map((p) => (
+                    <li key={p.id} className="text-sm">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="font-semibold text-fg">
+                          {RECORDED_METHOD_LABELS[p.method as keyof typeof RECORDED_METHOD_LABELS] ?? p.method}
+                          {p.status !== "PAID" ? (
+                            <span className="font-normal text-muted"> · {PAYMENT_STATUS_LABELS[p.status] ?? p.status}</span>
+                          ) : null}
+                        </p>
+                        <p className="font-semibold tabular-nums text-fg">{formatMoney(p.amount_cents)}</p>
+                      </div>
+                      {p.method === "CASH" && p.tendered_cents !== null ? (
+                        <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 text-muted">
+                          <dt>Valor recebido</dt>
+                          <dd className="text-right tabular-nums text-fg" data-testid="payment-tendered">{formatMoney(p.tendered_cents)}</dd>
+                          <dt>Troco</dt>
+                          <dd className="text-right tabular-nums text-fg" data-testid="payment-change">{formatMoney(p.changeCents ?? 0)}</dd>
+                        </dl>
+                      ) : null}
+                      <p className="mt-1 text-xs text-muted">
+                        {formatDateTime(p.paid_at ?? p.created_at)}
+                        {p.recordedByName ? ` · recebido por ${p.recordedByName}` : ""}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </Section>
+            ) : null}
 
             <Section title="Linha do tempo">
               {historyFailed && !entries ? (

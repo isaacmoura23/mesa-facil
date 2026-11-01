@@ -15,7 +15,7 @@ export async function getRestaurantProfile(restaurantId: string): Promise<Restau
   const [settings, origins, establishmentRow] = await Promise.all([
     supabase
       .from("restaurant_settings")
-      .select("whatsapp, phone, address_text, storefront_url")
+      .select("whatsapp, phone, address_text, storefront_url, storefront_notice")
       .eq("restaurant_id", restaurantId)
       .maybeSingle(),
     supabase.rpc("get_storefront_origins", { p_restaurant: restaurantId }),
@@ -31,7 +31,7 @@ export async function getRestaurantProfile(restaurantId: string): Promise<Restau
   let contact: RestaurantProfileData["contact"] = null;
   if (!settings.error) {
     if (settings.data === null) {
-      contact = { whatsapp: null, phone: null, address_text: null, storefront_url: null };
+      contact = { whatsapp: null, phone: null, address_text: null, storefront_url: null, storefront_notice: null };
     } else {
       const parsed = contactRowSchema.safeParse(settings.data);
       if (parsed.success) contact = parsed.data;

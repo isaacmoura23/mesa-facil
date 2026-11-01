@@ -47,14 +47,21 @@ export function ShellFrame({
       <DesktopSidebar areaLabel={areaLabel} nav={nav} navLabel={navLabel} navFooter={navFooter} />
 
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
-            <BrandMark href="/entrar" compact className="lg:hidden" />
-            {headerStart}
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <ThemeToggle />
-            {headerEnd}
+        {/*
+          Celular: barra reta de ponta a ponta. Computador: cartão flutuante como o da barra lateral, com o mesmo
+          topo (24px) e a mesma altura da primeira linha dela (marca + botão de recolher), para as duas
+          linhas ficarem alinhadas; a faixa atrás tem a cor da página para o conteúdo não aparecer por baixo.
+        */}
+        <header className="sticky top-0 z-30 shrink-0 border-b border-line bg-surface/95 backdrop-blur lg:border-b-0 lg:bg-bg/90 lg:pt-6 lg:pr-6 lg:pb-2">
+          <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:h-[4.75rem] lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:shadow-[var(--shadow-pop)]">
+            <div className="flex min-w-0 items-center gap-2">
+              <BrandMark href="/entrar" compact className="lg:hidden" />
+              {headerStart}
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <ThemeToggle />
+              {headerEnd}
+            </div>
           </div>
         </header>
 

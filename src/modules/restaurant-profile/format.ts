@@ -92,6 +92,9 @@ export function normalizePhone(raw: string): Normalized<string | null> {
 
 export const ADDRESS_MAX = 200;
 
+/** Tamanho máximo do aviso fixo da vitrine (igual ao limite do banco). */
+export const NOTICE_MAX = 240;
+
 // ---------------------------------------------------------------------------
 // URL da vitrine personalizada
 // ---------------------------------------------------------------------------

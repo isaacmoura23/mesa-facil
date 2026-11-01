@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isValidTimezone } from "./timezones";
 import {
   ADDRESS_MAX,
+  NOTICE_MAX,
   normalizePhone,
   normalizeStorefrontUrl,
   normalizeWhatsapp,
@@ -40,6 +41,12 @@ export const contactSchema = z.object({
     .pipe(z.string().max(ADDRESS_MAX, `Endereço muito longo (máximo de ${ADDRESS_MAX} caracteres).`))
     .transform((value) => (value === "" ? null : value)),
   storefrontUrl: normalizedField(normalizeStorefrontUrl),
+  notice: z
+    .string()
+    .optional()
+    .transform((value) => (value ?? "").trim())
+    .pipe(z.string().max(NOTICE_MAX, `Aviso muito longo (máximo de ${NOTICE_MAX} caracteres).`))
+    .transform((value) => (value === "" ? null : value)),
 });
 export type ContactInput = z.infer<typeof contactSchema>;
 

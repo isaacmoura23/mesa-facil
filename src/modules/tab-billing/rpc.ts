@@ -34,8 +34,8 @@ export async function recordPayment(
   input: RecordPaymentInput,
 ): Promise<RecordPaymentResult> {
   const { data, error } = await supabase.rpc("record_payment", {
-    p_tab: input.tabId,
-    p_order: null,
+    p_tab: input.tabId ?? null,
+    p_order: input.orderId ?? null,
     p_method: input.method,
     p_amount_cents: input.amountCents,
     p_tendered_cents: input.method === "CASH" ? input.tenderedCents : null,

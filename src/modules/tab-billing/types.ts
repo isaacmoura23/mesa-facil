@@ -91,7 +91,9 @@ export const closeTabResultSchema = z.object({}).passthrough();
 export const cancelTabResultSchema = z.object({}).passthrough();
 
 export type RecordPaymentInput = {
-  tabId: string;
+  /** Exatamente um entre `tabId` (comanda) e `orderId` (pedido de retirada/entrega). */
+  tabId?: string;
+  orderId?: string;
   method: PaymentMethod;
   amountCents: number;
   tenderedCents: number | null;

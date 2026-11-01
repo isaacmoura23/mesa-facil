@@ -197,4 +197,6 @@ export type OperationsPermissions = {
   updateStatus: boolean;
   cancel: boolean;
   print: boolean;
+  /** Receber pagamento de pedido (caixa e gerente). */
+  recordPayments: boolean;
 };
