@@ -124,6 +124,7 @@ const restaurantSchema = z.object({
   timezone: nullableText,
   contact: z.unknown().catch(null),
   storefront_url: nullableText,
+  notice: nullableText,
 });
 
 const settingsSchema = z
@@ -257,6 +258,7 @@ export function normalizeMenu(raw: unknown, opts: NormalizeMenuOptions): ApiMenu
       timezone: restaurant.timezone,
       contact: normalizeContact(restaurant.contact),
       storefrontUrl: normalizeStorefrontUrl(restaurant.storefront_url),
+      notice: trimmedOrNull(restaurant.notice)?.slice(0, 240) ?? null,
     },
     settings: {
       acceptsOrders: settings.accepts_orders ?? true,

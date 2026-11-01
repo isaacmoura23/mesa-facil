@@ -58,6 +58,7 @@ describe("normalizeMenu", () => {
       timezone: "America/Sao_Paulo",
       contact: null,
       storefrontUrl: null,
+      notice: null,
     });
     expect(menu.settings.fulfillmentTypes).toEqual(["DELIVERY", "PICKUP"]);
     expect(menu.settings.pickupInstructions).toBe("Balcão");
@@ -91,6 +92,22 @@ describe("normalizeMenu", () => {
         modifiers: [{ id: U(6), name: "Bacon", priceDeltaCents: 500, isAvailable: true }],
       },
     ]);
+  });
+
+  it("lê o aviso da vitrine (notice): apara espaços, limita a 240 e vazio vira null", () => {
+    const withNotice = legacyMenu();
+    Object.assign(withNotice.restaurant, { notice: "  Encomendas de Natal até 20/12  " });
+    expect(normalizeMenu(withNotice, { imageUrl })!.restaurant.notice).toBe("Encomendas de Natal até 20/12");
+
+    const long = legacyMenu();
+    Object.assign(long.restaurant, { notice: "x".repeat(300) });
+    expect(normalizeMenu(long, { imageUrl })!.restaurant.notice).toHaveLength(240);
+
+    for (const bad of ["", "   ", null, 5]) {
+      const raw = legacyMenu();
+      Object.assign(raw.restaurant, { notice: bad });
+      expect(normalizeMenu(raw, { imageUrl })!.restaurant.notice).toBeNull();
+    }
   });
 
   it("lê variants, badges, contact e storefront_url quando a DB-4 existir", () => {
