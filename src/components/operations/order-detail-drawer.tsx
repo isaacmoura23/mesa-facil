@@ -20,6 +20,7 @@ import {
 } from "@/modules/operations/types";
 import type { OrderAction } from "@/modules/operations/use-order-actions";
 import { useOrderHistory } from "@/modules/operations/use-order-history";
+import { OrderPaymentSection } from "./order-payment-section";
 import { PrintButton } from "./print-button";
 import { FulfillmentBadge, StatusBadge } from "./status-badge";
 
@@ -29,6 +30,10 @@ type DrawerProps = {
   actions: OrderAction[];
   busy: boolean;
   canPrint: boolean;
+  /** Mostra "Receber pagamento" (permissão payments.record). */
+  canRecordPayments?: boolean;
+  /** Depois de gravar um pagamento, o chamador relê o pedido. */
+  onPaymentRecorded?: (order: OperationsOrder) => void | Promise<void>;
   onClose: () => void;
   onAction: (order: OperationsOrder, action: OrderAction) => void;
 };
@@ -78,6 +83,8 @@ function DrawerBody({
   actions,
   busy,
   canPrint,
+  canRecordPayments = false,
+  onPaymentRecorded,
   onClose,
   onAction,
 }: Omit<DrawerProps, "order"> & { order: OperationsOrder }) {
@@ -239,6 +246,16 @@ function DrawerBody({
             ) : null}
           </p>
         </Section>
+
+        {canRecordPayments && order.status !== "CANCELLED" && order.status !== "REJECTED" ? (
+          <Section title="Receber pagamento">
+            <OrderPaymentSection
+              order={order}
+              restaurantId={restaurantId}
+              onRecorded={() => onPaymentRecorded?.(order)}
+            />
+          </Section>
+        ) : null}
 
         <Section title="Histórico">
           {failed && !entries ? (

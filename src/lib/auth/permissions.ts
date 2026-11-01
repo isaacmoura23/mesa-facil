@@ -11,6 +11,8 @@ export const OPERATIONAL_PERMISSIONS = [
   "tabs.manage",
   "payments.record",
   "print.request",
+  "cash.operate",
+  "cash.approve",
 ] as const satisfies readonly Permission[];
 
 /** Qualquer permissão que dá acesso a telas de /operacao (inclui as de leitura). */
@@ -18,6 +20,7 @@ export const OPERACAO_ACCESS_PERMISSIONS = [
   "orders.view",
   "tables.view",
   "tabs.view",
+  "cash.view",
   ...OPERATIONAL_PERMISSIONS,
 ] as const satisfies readonly Permission[];
 
@@ -99,6 +102,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "tabs.view": "Ver comandas",
   "tabs.manage": "Gerenciar comandas",
   "payments.record": "Registrar pagamentos",
+  "cash.view": "Ver o caixa",
+  "cash.operate": "Operar o caixa",
+  "cash.approve": "Aprovar retiradas do caixa",
   "print.request": "Solicitar impressão",
   "reports.view": "Ver relatórios",
   "team.manage": "Gerenciar equipe",

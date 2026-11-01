@@ -19,6 +19,7 @@ export default async function Page({ params }: PageProps<"/operacao/[slug]/pedid
         updateStatus: access.can("orders.update_status"),
         cancel: access.can("orders.cancel"),
         print: access.can("print.request"),
+        recordPayments: access.can("payments.record"),
       }}
     />
   );

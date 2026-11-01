@@ -95,3 +95,23 @@ Não há E2E automatizado de navegador. Antes de abrir um restaurante:
 3. **Salão**: abrir comanda numa mesa -> lançar pedido -> pagamento parcial + restante -> fechar -> mesa liberada.
 4. Imprimir comanda de cozinha, recibo e conta (80 e 58 mm) e conferir o papel.
 5. Como dono, confirmar que nada é alterável e que dashboard/relatórios batem com os pedidos.
+
+## Caixa (dinheiro) — `/operacao/[slug]/caixa` (gestão: `/app/[slug]/caixa`, somente leitura)
+Quem usa: **caixa** (opera), **gerente** (opera e aprova), **dono** (só vê). Cozinha e garçom não veem o caixa.
+
+- **Um caixa por restaurante.** O **turno é opcional**: pagamentos em dinheiro entram no caixa mesmo sem turno aberto
+  (o histórico agrupa por dia). Quem quiser conferir a gaveta abre o turno (valor inicial) e fecha contando o dinheiro:
+  o sistema mostra o esperado e a diferença (falta/sobra).
+- **Dinheiro esperado na gaveta** = abertura + entradas − saídas. O troco já está embutido (recebido − troco = valor da venda).
+- **Venda em dinheiro** nasce **sozinha** quando um pagamento em dinheiro é registrado (comanda **ou pedido** de retirada/entrega),
+  guardando o valor da conta, o recebido e o **troco dado**. Pix e cartão não entram na gaveta (aparecem nos relatórios de vendas).
+- **Entrada** (suprimento) e **Saída** (pagamento feito pelo caixa, com motivo obrigatório): lançadas pelo caixa ou gerente.
+- **Retirada** (sangria): o **caixa só pede**; o **gerente aprova ou recusa** (nunca quem pediu). O gerente também pode retirar direto.
+  O caixa pode cancelar o próprio pedido pendente.
+- **Estorno**: só o gerente. O lançamento original **nunca muda nem some**; entra um lançamento contrário com motivo.
+  Só entrada, saída e retirada podem ser estornadas.
+- **Histórico**: por período (hoje, 7 e 30 dias) e por tipo, com quem lançou; exporta CSV. Tudo vai também para a auditoria.
+- **Calculadora de troco**: na tela de pagamento (botões de nota, troco em destaque e como devolver em notas/moedas) e avulsa no caixa.
+- Receber o pagamento de um **pedido** (retirada/entrega): abra o pedido em `/operacao/[slug]/pedidos` → "Receber pagamento".
+
+Pendência conhecida: pagamentos em dinheiro registrados **antes** desta função não viram vendas no caixa (não há retroativo).

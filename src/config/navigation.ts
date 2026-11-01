@@ -16,7 +16,8 @@ export type IconName =
   | "plans"
   | "subscriptions"
   | "support"
-  | "audit";
+  | "audit"
+  | "cash";
 
 /** Item de navegação já resolvido (serializável para Client Components). */
 export type NavEntry = {
@@ -45,6 +46,7 @@ const APP_NAV: readonly NavDefinition[] = [
   { segment: "pedidos", label: "Pedidos", icon: "orders", anyOf: ["orders.view"], readOnly: true },
   { segment: "cardapio", label: "Cardápio", icon: "menu", anyOf: ["menu.manage"] },
   { segment: "mesas", label: "Mesas", icon: "tables", anyOf: ["tables.view", "tables.manage"], readOnly: true },
+  { segment: "caixa", label: "Caixa", icon: "cash", anyOf: ["cash.view"], readOnly: true },
   { segment: "comandas", label: "Comandas", icon: "tabs", anyOf: ["tabs.view"], readOnly: true },
   { segment: "clientes", label: "Clientes", icon: "customers", anyOf: ["reports.view"] },
   { segment: "relatorios", label: "Relatórios", icon: "reports", anyOf: ["reports.view"] },
@@ -58,6 +60,7 @@ const OPERACAO_NAV: readonly NavDefinition[] = [
   { segment: "pedidos", label: "Pedidos", icon: "orders", anyOf: ["orders.view"] },
   { segment: "cozinha", label: "Cozinha", icon: "kitchen", anyOf: ["orders.view"] },
   { segment: "mesas", label: "Mesas", icon: "tables", anyOf: ["tables.view"] },
+  { segment: "caixa", label: "Caixa", icon: "cash", anyOf: ["cash.view"] },
   { segment: "comandas", label: "Comandas", icon: "tabs", anyOf: ["tabs.view"] },
   { segment: "historico", label: "Histórico", icon: "history", anyOf: ["orders.view"] },
 ];

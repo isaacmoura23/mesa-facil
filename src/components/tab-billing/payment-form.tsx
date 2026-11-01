@@ -11,11 +11,14 @@ import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { BillingActionError } from "@/modules/tab-billing/errors";
 import { centsToInput, parseMoneyToCents } from "@/modules/tab-billing/money";
 import { recordPayment } from "@/modules/tab-billing/rpc";
+import { changeBreakdown, changeFor, tenderSuggestions } from "@/modules/cash/money";
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS, type PaymentMethod } from "@/modules/tab-billing/types";
 
 type PaymentFormProps = {
   supabase: AppSupabaseClient;
-  tabId: string;
+  /** Comanda a receber. Informe `tabId` OU `orderId` (pedido de retirada/entrega). */
+  tabId?: string;
+  orderId?: string;
   remainingCents: number;
   /** Relê o saldo e avisa o chamador quando o estado mudou por outro caminho (ex.: OVERPAYMENT). */
   onStale: () => Promise<void>;
@@ -34,7 +37,7 @@ function newAttemptKey(): string {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function PaymentForm({ supabase, tabId, remainingCents, onStale, onRecorded, onAttempt }: PaymentFormProps) {
+export function PaymentForm({ supabase, tabId, orderId, remainingCents, onStale, onRecorded, onAttempt }: PaymentFormProps) {
   const [method, setMethod] = useState<PaymentMethod>("PIX");
   // null = acompanha o saldo atual (padrão = saldo restante).
   const [amountText, setAmountText] = useState<string | null>(null);
@@ -65,9 +68,8 @@ export function PaymentForm({ supabase, tabId, remainingCents, onStale, onRecord
           : undefined
       : undefined;
   const change =
-    isCash && tenderedCents !== null && amountCents !== null && !amountError && !tenderedError
-      ? tenderedCents - amountCents
-      : null;
+    isCash && !amountError && !tenderedError ? changeFor(amountCents, tenderedCents) : null;
+  const quickTenders = isCash && amountCents !== null && !amountError ? tenderSuggestions(amountCents) : [];
   const canSubmit = !pending && !amountError && !tenderedError && amountCents !== null;
 
   function clearFeedback() {
@@ -93,6 +95,7 @@ export function PaymentForm({ supabase, tabId, remainingCents, onStale, onRecord
     try {
       const result = await recordPayment(supabase, {
         tabId,
+        orderId,
         method,
         amountCents,
         tenderedCents,
@@ -188,6 +191,34 @@ export function PaymentForm({ supabase, tabId, remainingCents, onStale, onRecord
         )}
       </div>
 
+      {isCash && quickTenders.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-medium text-fg">Valor recebido rápido</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Valor recebido rápido">
+            {quickTenders.map((value, index) => (
+              <Button
+                key={value}
+                variant={tenderedCents === value ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => {
+                  setTenderedText(centsToInput(value));
+                  clearFeedback();
+                }}
+                disabled={pending}
+                aria-pressed={tenderedCents === value}
+              >
+                {index === 0 ? `Exato (${formatMoney(value)})` : formatMoney(value)}
+              </Button>
+            ))}
+            {tenderedText.trim() ? (
+              <Button variant="ghost" size="sm" onClick={() => setTenderedText("")} disabled={pending}>
+                Limpar
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       {isCash ? (
         <TextField
           label="Referência"
@@ -202,9 +233,21 @@ export function PaymentForm({ supabase, tabId, remainingCents, onStale, onRecord
 
       <div aria-live="polite" aria-atomic="true" className="empty:hidden">
         {change !== null ? (
-          <p className="rounded-control bg-info-soft px-3 py-2 text-sm font-medium text-info-soft-fg">
-            Troco a devolver: <span className="tabular-nums">{formatMoney(change)}</span>
-          </p>
+          <div className="rounded-control bg-info-soft px-4 py-3 text-info-soft-fg">
+            <p className="text-sm font-medium">Troco a devolver</p>
+            <p className="text-3xl font-semibold tabular-nums" data-testid="change-amount">
+              {formatMoney(change)}
+            </p>
+            {change > 0 ? (
+              <p className="mt-1 text-sm">
+                {changeBreakdown(change)
+                  .map((part) => `${part.count}× ${formatMoney(part.value)}`)
+                  .join(" · ")}
+              </p>
+            ) : (
+              <p className="mt-1 text-sm">Sem troco: o valor recebido é exato.</p>
+            )}
+          </div>
         ) : null}
       </div>
 
