@@ -9,6 +9,9 @@ import type { OperationsOrder } from "@/modules/operations/types";
 import { dispatchCount, subscribeSessionLog } from "@/modules/printing/session-log";
 import type { PrintDocumentType } from "@/modules/printing/types";
 
+/** Comanda completa primeiro (é a que o atendimento usa), depois a de preparo e o recibo. */
+const FULL_DOCUMENTS: readonly PrintDocumentType[] = ["ORDER_FULL", "KITCHEN_TICKET", "ORDER_RECEIPT"];
+
 type PrintButtonProps = {
   order: OperationsOrder;
   /** Permissão `print.request` do usuário (a RPC confere de novo no banco). */
@@ -17,6 +20,8 @@ type PrintButtonProps = {
   iconOnly?: boolean;
   /** Documentos oferecidos no diálogo (padrão: comanda de preparo e recibo). */
   documentTypes?: readonly PrintDocumentType[];
+  /** Oferece também a "Comanda completa" (a primeira do diálogo): só para quem recebe pagamento (payments.record). */
+  fullDocument?: boolean;
   /** Rótulo quando o pedido ainda não foi enviado nesta sessão. */
   label?: string;
 };
@@ -32,6 +37,7 @@ export function PrintButton({
   size = "md",
   iconOnly = false,
   documentTypes,
+  fullDocument = false,
   label = "Imprimir comanda",
 }: PrintButtonProps) {
   const { toast } = useToast();
@@ -53,7 +59,7 @@ export function PrintButton({
     if (blockedReason || busy) return;
     setBusy(true);
     try {
-      await printBridge.print(order, documentTypes);
+      await printBridge.print(order, documentTypes ?? (fullDocument ? FULL_DOCUMENTS : undefined));
     } catch (cause) {
       toast({
         title: "Não foi possível imprimir",

@@ -386,6 +386,7 @@ export function OrdersBoard({ restaurantId, restaurantName, permissions }: Order
                 actions={actionsFor(order)}
                 busy={pending.has(order.id)}
                 canPrint={permissions.print}
+                canRecordPayments={permissions.recordPayments}
                 onOpen={openOrder}
                 onAction={handleAction}
               />

@@ -308,7 +308,7 @@ function DrawerBody({
             {action.label}
           </Button>
         ))}
-        <PrintButton order={order} allowed={canPrint} size="lg" />
+        <PrintButton order={order} allowed={canPrint} fullDocument={canRecordPayments} size="lg" />
       </footer>
     </div>
   );
