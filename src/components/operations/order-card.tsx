@@ -25,6 +25,8 @@ type OrderCardProps = {
   actions: OrderAction[];
   busy: boolean;
   canPrint: boolean;
+  /** payments.record: oferece a comanda completa na impressão. */
+  canRecordPayments?: boolean;
   onOpen: (order: OperationsOrder) => void;
   onAction: (order: OperationsOrder, action: OrderAction) => void;
 };
@@ -36,6 +38,7 @@ function OrderCardView({
   actions,
   busy,
   canPrint,
+  canRecordPayments = false,
   onOpen,
   onAction,
 }: OrderCardProps) {
@@ -138,7 +141,7 @@ function OrderCardView({
               Cancelar
             </Button>
           ) : null}
-          <PrintButton order={order} allowed={canPrint} size="lg" iconOnly />
+          <PrintButton order={order} allowed={canPrint} fullDocument={canRecordPayments} size="lg" iconOnly />
         </div>
       ) : null}
     </li>

@@ -5,12 +5,13 @@ import { z } from "zod";
  * O payload é montado no servidor; aqui só validamos o formato antes de renderizar.
  */
 
-export const PRINT_DOCUMENT_TYPES = ["KITCHEN_TICKET", "ORDER_RECEIPT"] as const;
+export const PRINT_DOCUMENT_TYPES = ["KITCHEN_TICKET", "ORDER_RECEIPT", "ORDER_FULL"] as const;
 export type PrintDocumentType = (typeof PRINT_DOCUMENT_TYPES)[number];
 
 export const DOCUMENT_LABELS: Record<PrintDocumentType, string> = {
   KITCHEN_TICKET: "Comanda de preparo",
   ORDER_RECEIPT: "Recibo do pedido",
+  ORDER_FULL: "Comanda completa",
 };
 
 export const PAPER_WIDTHS = ["80", "58"] as const;
@@ -34,6 +35,15 @@ export const printItemSchema = z.object({
   notes: z.string().nullish(),
   modifiers: z.array(modifierSchema).default([]),
 });
+
+const paymentLineSchema = z.object({
+  method: z.string(),
+  amount_cents: z.number().int(),
+  tendered_cents: z.number().int().nullish(),
+  change_cents: z.number().int().nullish(),
+  paid_at_local: z.string().nullish(),
+});
+export type PrintPaymentLine = z.infer<typeof paymentLineSchema>;
 
 const addressSchema = z
   .object({
@@ -60,7 +70,7 @@ export const printPayloadSchema = z.object({
   items: z.array(printItemSchema).default([]),
   // KITCHEN_TICKET
   customer_first_name: z.string().nullish(),
-  // ORDER_RECEIPT
+  // ORDER_RECEIPT e ORDER_FULL
   customer_name: z.string().nullish(),
   subtotal_cents: z.number().int().nullish(),
   delivery_fee_cents: z.number().int().nullish(),
@@ -70,6 +80,12 @@ export const printPayloadSchema = z.object({
   payment_method: z.string().nullish(),
   change_for_cents: z.number().int().nullish(),
   delivery_address: addressSchema.nullish(),
+  // ORDER_FULL (comanda completa, para quem atende)
+  customer_phone: z.string().nullish(),
+  public_code: z.string().nullish(),
+  estimated_ready_at_local: z.string().nullish(),
+  confirmed_at_local: z.string().nullish(),
+  payments: z.array(paymentLineSchema).default([]),
 });
 export type PrintPayload = z.infer<typeof printPayloadSchema>;
 export type PrintItem = PrintPayload["items"][number];

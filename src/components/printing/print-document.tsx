@@ -1,5 +1,6 @@
 import { FULFILLMENT_LABELS, PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/modules/operations/types";
-import { formatAddress, formatMoney } from "@/modules/operations/format";
+import { formatAddress, formatMoney, formatPhone } from "@/modules/operations/format";
+import { PAYMENT_METHOD_LABELS as RECORDED_METHOD_LABELS } from "@/modules/tab-billing/types";
 import { DOCUMENT_LABELS, type PaperWidth, type PrintItem, type PrintPayload } from "@/modules/printing/types";
 
 type PrintDocumentProps = {
@@ -45,7 +46,9 @@ export function ItemLine({ item, receipt }: { item: PrintItem; receipt: boolean 
  * payload montado no servidor e é escapado pelo React. A comanda nunca mostra preços.
  */
 export function PrintDocument({ payload, width, copyNumber = 1 }: PrintDocumentProps) {
-  const receipt = payload.document_type === "ORDER_RECEIPT";
+  const full = payload.document_type === "ORDER_FULL";
+  // Recibo e comanda completa mostram preços e dados do cliente; a comanda de preparo nunca.
+  const receipt = payload.document_type === "ORDER_RECEIPT" || full;
   const place = [
     payload.table_label ? `Mesa ${payload.table_label}` : null,
     payload.tab_label ? `Comanda ${payload.tab_label}` : null,
@@ -99,6 +102,24 @@ export function PrintDocument({ payload, width, copyNumber = 1 }: PrintDocumentP
             <dd>{customer}</dd>
           </div>
         ) : null}
+        {full && payload.customer_phone ? (
+          <div>
+            <dt>Telefone</dt>
+            <dd>{formatPhone(payload.customer_phone)}</dd>
+          </div>
+        ) : null}
+        {full && payload.public_code ? (
+          <div>
+            <dt>Código</dt>
+            <dd className="tp-strong">{payload.public_code}</dd>
+          </div>
+        ) : null}
+        {full && payload.estimated_ready_at_local ? (
+          <div>
+            <dt>Prazo esperado</dt>
+            <dd className="tp-strong">{payload.estimated_ready_at_local}</dd>
+          </div>
+        ) : null}
       </dl>
       <Rule />
       {payload.items.length === 0 ? (
@@ -146,12 +167,44 @@ export function PrintDocument({ payload, width, copyNumber = 1 }: PrintDocumentP
               </div>
             ) : null}
           </dl>
-          <p className="tp-pay">
-            {method ? `Pagamento declarado: ${method}, a pagar ${payAt}.` : "Forma de pagamento não declarada."}
-            {payload.payment_method === "CASH" && payload.change_for_cents && payload.total_cents != null
-              ? ` Troco para ${formatMoney(payload.change_for_cents)} (levar ${formatMoney(Math.max(0, payload.change_for_cents - payload.total_cents))}).`
-              : ""}
-          </p>
+          {full && payload.payments.length > 0 ? (
+            <>
+              <Rule />
+              <p className="tp-strong">Pagamento recebido</p>
+              <dl className="tp-totals">
+                {payload.payments.map((line, index) => (
+                  <div key={`${line.method}-${index}`}>
+                    <dt>{RECORDED_METHOD_LABELS[line.method as keyof typeof RECORDED_METHOD_LABELS] ?? line.method}</dt>
+                    <dd>{formatMoney(line.amount_cents)}</dd>
+                  </div>
+                ))}
+                {payload.payments.map((line, index) =>
+                  line.tendered_cents != null ? (
+                    <div key={`rec-${index}`}>
+                      <dt>Valor recebido</dt>
+                      <dd>{formatMoney(line.tendered_cents)}</dd>
+                    </div>
+                  ) : null,
+                )}
+                {payload.payments.map((line, index) =>
+                  line.change_cents != null ? (
+                    <div key={`troco-${index}`}>
+                      <dt>Troco</dt>
+                      <dd className="tp-strong">{formatMoney(line.change_cents)}</dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
+            </>
+          ) : null}
+          {full && payload.payments.length > 0 ? null : (
+            <p className="tp-pay">
+              {method ? `Pagamento declarado: ${method}, a pagar ${payAt}.` : "Forma de pagamento não declarada."}
+              {payload.payment_method === "CASH" && payload.change_for_cents && payload.total_cents != null
+                ? ` Troco para ${formatMoney(payload.change_for_cents)} (levar ${formatMoney(Math.max(0, payload.change_for_cents - payload.total_cents))}).`
+                : ""}
+            </p>
+          )}
           {payload.payment_status ? (
             <p>Situação: {PAYMENT_STATUS_LABELS[payload.payment_status] ?? payload.payment_status}</p>
           ) : null}
@@ -170,6 +223,7 @@ export function PrintDocument({ payload, width, copyNumber = 1 }: PrintDocumentP
       ) : null}
       <Rule />
       <footer className="tp-center tp-foot">
+        {full && payload.confirmed_at_local ? <p>Pedido aceito em {payload.confirmed_at_local}</p> : null}
         {receipt ? <p>Documento sem valor fiscal.</p> : <p>Comanda de preparo, sem preços.</p>}
       </footer>
     </article>

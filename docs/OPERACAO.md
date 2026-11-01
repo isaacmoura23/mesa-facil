@@ -62,6 +62,11 @@ confirmação. Para reduzir cliques, use o navegador em modo quiosque com a impr
 operacional, fora do app. O texto impresso não contém telefone/e-mail do cliente na comanda de cozinha. Não foi testado em
 impressora térmica física: faça uma impressão de teste antes de abrir.
 
+**Comanda completa** (para quem atende: gerente e caixa, `payments.record`): cupom no estilo de delivery com cliente, telefone,
+código de acompanhamento, prazo esperado, itens com preço, subtotal, taxa de entrega, desconto, total, **pagamento recebido
+(forma, valor recebido e troco)**, endereço de entrega e hora do aceite. Sai como primeira opção do diálogo de impressão em
+Pedidos. A **comanda de preparo** continua sem preços e só com o primeiro nome do cliente. O sistema não tem "taxa de embalagem".
+
 ## 9. Relatórios e CSV (`/app/[slug]/relatorios`, `/dashboard`)
 Período (dia/semana/mês ou intervalo de até 366 dias) no fuso do restaurante. Sete relatórios; exportação CSV com BOM e `;`,
 com proteção contra fórmulas de planilha. Valores: "bruto" inclui cancelados; "concluídos" não; ticket médio sobre o bruto.
