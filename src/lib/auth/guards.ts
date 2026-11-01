@@ -1,6 +1,7 @@
 import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "./session";
+import { getMfaState, isPlatformMfaRequired } from "./mfa";
 import { getMyPermissions, getMyRestaurants, isPlatformAdmin } from "./rpc";
 import { areaHomePath, canEnterArea, hasAny } from "./permissions";
 import type {
@@ -35,6 +36,20 @@ export async function requirePlatformAdmin(
 ): Promise<AuthUser> {
   const user = await requireUser(nextPath ?? "/platform/dashboard");
   if (!(await isPlatformAdmin())) notFound();
+
+  // MFA TOTP obrigatório (aal2) para administradores da plataforma. Só depois do 404 para não-admins,
+  // então quem não é admin nunca descobre que a área existe nem vê o fluxo de MFA.
+  if (isPlatformMfaRequired()) {
+    const mfa = await getMfaState();
+    if (!mfa.aal2) {
+      const next = encodeURIComponent(sanitizeNext(nextPath) ?? "/platform/dashboard");
+      redirect(
+        mfa.hasVerifiedTotp
+          ? `/conta/seguranca/verificar?next=${next}`
+          : `/conta/seguranca?obrigatorio=1&next=${next}`,
+      );
+    }
+  }
   return user;
 }
 

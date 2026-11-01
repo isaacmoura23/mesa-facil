@@ -69,7 +69,7 @@ describe("buildProductImagePath / isOwnProductImagePath", () => {
   it("isOwnProductImagePath recusa outro restaurante, traversal, subpastas, extensões fora da lista e formatos soltos", () => {
     const own = `restaurants/${RID}/products/${UUID}`;
     expect(isOwnProductImagePath(`${own}.png`, RID)).toBe(true);
-    expect(isOwnProductImagePath(`${own}.JPG`, RID)).toBe(true); // extensão sem diferença de caixa
+    expect(isOwnProductImagePath(`${own}.JPG`, RID)).toBe(false); // F-20: o CHECK do banco só aceita minúsculas
     const bad = [
       `restaurants/${RID_B}/products/${UUID}.png`,
       `restaurants/${RID}/logo/${UUID}.png`,
@@ -97,14 +97,14 @@ describe("buildProductImagePath / isOwnProductImagePath", () => {
 
   // F-20: a flag /i vale para o padrão INTEIRO (prefixo, uuid do restaurante), mas o CHECK do banco é case-sensitive.
   // O app aceita 'RESTAURANTS/...' e o uuid do restaurante em maiúsculas; o banco recusa depois (erro tardio, sem risco de segurança).
-  it.fails("[F-20] prefixo/uuid em maiúsculas devem ser recusados como o CHECK do banco faz (a flag /i é ampla demais)", () => {
+  it("[F-20] prefixo/uuid em maiúsculas devem ser recusados como o CHECK do banco faz (a flag /i é ampla demais)", () => {
     expect(isOwnProductImagePath(`RESTAURANTS/${RID}/products/${UUID}.png`, RID)).toBe(false);
     expect(isOwnProductImagePath(`restaurants/${RID.toUpperCase()}/products/${UUID}.png`, RID)).toBe(false);
   });
 
   // F-20: o restaurantId é interpolado no RegExp sem escapar. Hoje vem do guard (uuid), então é latente; com um id
   // não-uuid (".*", "a|b") qualquer restaurante passa. Correção: validar o formato do id ou escapar.
-  it.fails("[F-20] restaurantId com metacaracteres de regex não deve casar caminhos de outros restaurantes", () => {
+  it("[F-20] restaurantId com metacaracteres de regex não deve casar caminhos de outros restaurantes", () => {
     expect(isOwnProductImagePath(`restaurants/${RID_B}/products/${UUID}.png`, ".*")).toBe(false);
   });
 });

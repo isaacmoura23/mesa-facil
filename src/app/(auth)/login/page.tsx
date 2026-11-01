@@ -33,6 +33,7 @@ async function LoginContent({
   const params = await searchParams;
   const next = sanitizeNext(first(params.next)) ?? undefined;
   const callbackFailed = first(params.erro) === "callback";
+  const passwordReset = first(params.senha) === "redefinida";
 
   return (
     <AuthShell>
@@ -41,6 +42,12 @@ async function LoginContent({
           Entrar
         </h1>
         <p className="mt-1 mb-6 text-sm text-muted">Acesse o painel do seu restaurante.</p>
+
+        {passwordReset ? (
+          <Alert tone="success" className="mb-5">
+            Senha alterada. Entre com a nova senha.
+          </Alert>
+        ) : null}
 
         {callbackFailed ? (
           <Alert tone="danger" className="mb-5">

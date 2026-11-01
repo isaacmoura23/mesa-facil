@@ -5,6 +5,7 @@ import { loginAction } from "@/lib/auth/actions";
 import { initialFormState } from "@/lib/auth/form-state";
 import { loginSchema, toFieldErrors, type FieldErrors } from "@/lib/validation/auth";
 import { Alert } from "@/components/ui/alert";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/input";
 import { PasswordField } from "./password-field";
@@ -56,6 +57,11 @@ export function LoginForm({ next }: { next?: string }) {
         required
         error={errors.password}
       />
+      <p className="-mt-2 text-right text-sm">
+        <Link href="/esqueci-senha" className="font-medium text-accent-soft-fg underline underline-offset-4">
+          Esqueci minha senha
+        </Link>
+      </p>
 
       <Button type="submit" size="lg" fullWidth loading={pending}>
         {pending ? "Entrando..." : "Entrar"}

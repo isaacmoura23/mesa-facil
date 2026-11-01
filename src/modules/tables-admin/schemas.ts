@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isRealCalendarDate } from "@/lib/validation/date";
 
 /**
  * Schemas de entrada. Nenhum recebe `restaurant_id`: o restaurante sempre vem
@@ -69,7 +70,8 @@ export const EMPTY_FILTERS: TabFilters = { status: "ALL", from: null, to: null, 
 const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((value) => !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime()));
+  // Data de calendário real: "2026-02-30" rolaria para março e o Postgres recusaria o filtro (F-40).
+  .refine(isRealCalendarDate);
 
 type RawParams = Record<string, string | string[] | undefined>;
 

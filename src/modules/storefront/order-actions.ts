@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getPublicEnvStatus } from "@/lib/env";
-import { beginOrderAttempt, checkTrackRateLimit } from "@/modules/orders-server/limits";
+import { beginOrderAttemptShared, checkTrackRateLimitShared } from "@/modules/orders-server/limits";
 import { GENERIC_ORDER_ERROR, orderErrorMessage } from "@/modules/orders-server/messages";
 import {
   idempotencyKeySchema,
@@ -33,6 +33,7 @@ export type CreateOrderResult =
   | { status: "invalid"; fieldErrors: CheckoutFieldErrors; paymentErrors: PaymentFieldErrors }
   | { status: "rejected"; errors: OrderErrorItem[] }
   | { status: "rate_limited"; message: string; retryAfterSeconds: number }
+  | { status: "captcha"; message: string }
   | { status: "conflict" | "not_found" | "error"; message: string };
 
 const actionInputSchema = z.object({
@@ -41,6 +42,7 @@ const actionInputSchema = z.object({
   payment: z.unknown(),
   items: cartQuoteInputSchema.shape.items,
   idempotencyKey: idempotencyKeySchema,
+  captchaToken: z.string().max(2048).nullish(),
 });
 
 const GENERIC: CreateOrderResult = { status: "error", message: GENERIC_ORDER_ERROR };
@@ -62,7 +64,8 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
     };
   }
 
-  const attempt = beginOrderAttempt(clientIp(await headers()), slug);
+  const ip = clientIp(await headers());
+  const attempt = await beginOrderAttemptShared(ip, slug);
   if (!attempt.allowed) {
     return {
       status: "rate_limited",
@@ -102,8 +105,9 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
         changeForCents: changeForCents(payment.data),
       },
       idempotencyKey: base.data.idempotencyKey,
+      captchaToken: base.data.captchaToken ?? null,
     },
-    { slug, source: "storefront" },
+    { slug, source: "storefront", ip },
   );
   attempt.finish(result.status === "created" && !result.order.idempotentReplay);
 
@@ -116,6 +120,8 @@ export async function createOrderAction(input: unknown): Promise<CreateOrderResu
       };
     case "rejected":
       return { status: "rejected", errors: result.errors };
+    case "captcha":
+      return { status: "captcha", message: result.message };
     case "conflict":
       return { status: "conflict", message: orderErrorMessage("IDEMPOTENCY_CONFLICT") };
     case "not_found":
@@ -148,7 +154,7 @@ export async function trackOrderAction(slug: string, publicCode: string): Promis
   if (!normalized || !isPublicCode(publicCode) || !getPublicEnvStatus().ok) {
     return { status: "not_found" };
   }
-  const limit = checkTrackRateLimit(clientIp(await headers()), normalized);
+  const limit = await checkTrackRateLimitShared(clientIp(await headers()), normalized);
   if (!limit.allowed) return { status: "rate_limited", retryAfterSeconds: limit.retryAfterSeconds };
   return trackOrder(normalized, publicCode);
 }

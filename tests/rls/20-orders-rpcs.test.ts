@@ -530,7 +530,7 @@ describe("create_public_order: idempotência e clientes", () => {
     expect(new Set(results.map((r) => r.data.public_code)).size).toBe(6);
   });
 
-  it("clientes: upsert por telefone normalizado (prefixo 55 removido), nome nunca sobrescrito, e-mail só preenchido se vazio", async () => {
+  it("clientes: upsert por telefone normalizado (prefixo 55 removido), nome e e-mail do cliente existente nunca sobrescritos (S-04, Fase 8)", async () => {
     const local = phone(); // 11 dígitos
     const mask = `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
     const k1 = key();
@@ -542,7 +542,8 @@ describe("create_public_order: idempotência e clientes", () => {
     for (const r of [r1, r2, r3]) expect(r.data.ok, JSON.stringify(r.data)).toBe(true);
     const cs = rows(await admin().from("customers").select("*").eq("restaurant_id", Z.id).eq("phone", local));
     expect(cs).toHaveLength(1);
-    expect(cs[0]).toMatchObject({ name: "zz-Primeiro Nome", phone: local, email: "zz.primeiro@example.test" });
+    // S-04 (mig. 0131): cliente existente SEM e-mail continua sem e-mail; o e-mail só vive no snapshot do pedido
+    expect(cs[0]).toMatchObject({ name: "zz-Primeiro Nome", phone: local, email: null });
     // os 3 pedidos apontam para o mesmo cliente, mas cada um guarda o SEU snapshot de nome/telefone/e-mail
     const [o1, o2, o3] = [await orderByKey(k1), await orderByKey(k2), await orderByKey(k3)];
     expect(new Set([o1.customer_id, o2.customer_id, o3.customer_id]).size).toBe(1);

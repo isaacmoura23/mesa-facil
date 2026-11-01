@@ -369,8 +369,8 @@ describe("papéis: quem opera e quem apenas lê", () => {
     expect(rows(await admin().from("payments").select("id").eq("tab_id", tab.id))).toHaveLength(0);
   });
 
-  it.fails("[F-35] set_table_status não vaza o estado da mesa para quem não tem permissão (cozinha, mesa já no estado pedido)", async () => {
-    // F-35: o ramo 'unchanged' devolve id/nome/estado ANTES de checar a permissão
+  it("[F-35] set_table_status não vaza o estado da mesa para quem não tem permissão (cozinha, mesa já no estado pedido)", async () => {
+    // F-35 (corrigido na mig. 0133): a permissão é checada ANTES do ramo 'unchanged'
     const t = await makeTable(cleanup, A().id, { status: "AVAILABLE" });
     const r = await setTable("kitchenA", t.id, "AVAILABLE");
     expect(r.error, `a cozinha (sem tables.view) leu a mesa: ${JSON.stringify(r.data)}`).not.toBeNull();

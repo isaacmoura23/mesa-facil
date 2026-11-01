@@ -844,9 +844,9 @@ describe("platform_upsert_plan", () => {
     const r = await mkRest("active");
     await ok(call("superadmin", "platform_set_subscription", { p_restaurant: r.id, p_plan: p.id, p_status: "active", p_period_end: null, p_note: null }));
     await fail(up({ p_id: p.id, p_code: `zz-up-${U}-use2` }), "PLAN_IN_USE");
-    // plano em uso nunca é apagado (FK RESTRICT), nem pelo superadmin por REST
+    // plano em uso nunca é apagado: sem DELETE direto em plans (migração 131), nem chega ao FK RESTRICT
     const delUsed = await as("superadmin").from("plans").delete().eq("id", p.id).select("id");
-    expect(delUsed.error?.code).toBe("23503");
+    expect(delUsed.error?.code).toBe("42501");
     expect(await count("plans", (q) => q.eq("id", p.id))).toBe(1);
     expect((await adm().from("plans").select("code").eq("id", p.id).single()).data!.code).toBe(p.code);
     await ok(up({ p_id: p.id, p_code: p.code.toUpperCase(), p_name: "Mesmo código", p_price_cents: 1 }));

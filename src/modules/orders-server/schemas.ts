@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { FULFILLMENTS, isUuid } from "@/modules/storefront/schemas";
 import { isValidBrPhone, isValidCep, onlyDigits } from "@/modules/storefront/masks";
+import { CONTROL_CHARS_MESSAGE, findControlCharPath } from "@/lib/validation/text";
 
 /**
  * Entrada de criação de pedido (camelCase), compartilhada pela Server Action da
@@ -85,11 +86,16 @@ const orderObject = z.object({
   notes: optionalText(MAX_ORDER_NOTES),
   payment: paymentSchema,
   idempotencyKey: idempotencyKeySchema.optional(),
+  /** Token do Cloudflare Turnstile. Opcional no contrato; exigido só quando a verificação está ligada no servidor. */
+  captchaToken: z.string().max(2048, "Token de verificação inválido.").nullish(),
 });
 
 type OrderShape = z.infer<typeof orderObject>;
 
 function checkRules(value: OrderShape, ctx: z.RefinementCtx): void {
+  // NUL e controles em qualquer texto do pedido (F-30): o jsonb do Postgres recusaria e viraria 500.
+  const bad = findControlCharPath(value);
+  if (bad) ctx.addIssue({ code: "custom", path: bad, message: CONTROL_CHARS_MESSAGE });
   if (value.fulfillmentType === "DELIVERY") {
     if (!value.address) {
       ctx.addIssue({ code: "custom", path: ["address"], message: "Informe o endereço de entrega." });
@@ -157,6 +163,8 @@ export type SubmitOrderResult =
   /** Dados inválidos: HTTP 400. Campo -> mensagem. */
   | { status: "invalid"; issues: { path: string; message: string }[] }
   | { status: "not_found" }
+  /** Verificação anti-robô (Turnstile) ausente, inválida ou indisponível: HTTP 403. */
+  | { status: "captcha"; reason: "missing" | "invalid" | "unavailable"; message: string }
   | { status: "error" };
 
 /** Só os dígitos do telefone (formato enviado ao banco). */

@@ -81,3 +81,24 @@ export function slugify(input: string): string {
     .slice(0, 63)
     .replace(/-+$/g, "");
 }
+
+export const forgotPasswordSchema = z.object({ email });
+
+export const resetPasswordSchema = z
+  .object({
+    password: signupSchemaPassword(),
+    confirmPassword: z.string().min(1, "Repita a senha."),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "As senhas não conferem.",
+  });
+
+function signupSchemaPassword() {
+  return z
+    .string()
+    .min(8, "A senha precisa ter pelo menos 8 caracteres.")
+    .max(256, "Senha muito longa.")
+    .regex(/[A-Za-z]/, "Use ao menos uma letra.")
+    .regex(/[0-9]/, "Use ao menos um número.");
+}

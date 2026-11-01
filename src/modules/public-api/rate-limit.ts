@@ -1,12 +1,12 @@
 import { isIP } from "node:net";
+import { upstashConfig, upstashDecr, upstashIncr, warnIfMemoryOnly } from "./upstash";
 
 /**
  * Limitador de requisições por janela deslizante (log de timestamps) em memória.
  *
- * LIMITAÇÃO: o estado vive na instância do processo. Em serverless (Vercel) cada
- * instância tem o seu contador, então o limite efetivo é "por instância" e some
- * em cold start. Serve como freio contra abuso casual; para um limite global
- * troque por Upstash Redis / Vercel KV mantendo esta mesma interface.
+ * `check`/`refund` (síncronos) usam SÓ a memória da instância. `checkAsync`/`refundAsync` usam o Upstash Redis
+ * (contador atômico compartilhado, via REST) quando UPSTASH_REDIS_REST_URL/TOKEN existem e o limitador tem `name`;
+ * sem chaves, ou se o Redis falhar, caem na memória. O app (rotas, Server Actions) usa `checkLimit`/`refundLimit`.
  */
 
 export type RateLimitResult = {
@@ -19,10 +19,23 @@ export type RateLimitResult = {
 
 export type RateLimiter = {
   check(key: string): RateLimitResult;
+  /** Como `check`, mas compartilhado entre instâncias quando o Upstash está configurado. */
+  checkAsync?(key: string): Promise<RateLimitResult>;
   /** Devolve a ÚLTIMA tentativa registrada da chave (ex.: o pedido acabou não sendo criado). */
   refund(key: string): void;
+  refundAsync?(key: string): Promise<void>;
   size(): number;
 };
+
+/** Usa a versão assíncrona (Upstash) quando existir; dublês de teste só têm `check`. */
+export async function checkLimit(limiter: RateLimiter, key: string): Promise<RateLimitResult> {
+  return limiter.checkAsync ? limiter.checkAsync(key) : limiter.check(key);
+}
+
+export async function refundLimit(limiter: RateLimiter, key: string): Promise<void> {
+  if (limiter.refundAsync) await limiter.refundAsync(key);
+  else limiter.refund(key);
+}
 
 export type RateLimiterOptions = {
   limit: number;
@@ -30,6 +43,8 @@ export type RateLimiterOptions = {
   /** Teto de chaves rastreadas (descarta as mais antigas). */
   maxKeys?: number;
   now?: () => number;
+  /** Nome estável do balde no Redis (ex.: "api-menu"). Sem nome, o limitador nunca usa o Upstash. */
+  name?: string;
 };
 
 export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
@@ -50,8 +65,25 @@ export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
     }
   };
 
-  return {
+  const redisKey = (key: string) => `rl:${options.name}:${key}`;
+
+  const limiter: RateLimiter = {
     size: () => hitsByKey.size,
+    async checkAsync(key) {
+      if (!options.name || !upstashConfig()) return limiter.check(key);
+      const counted = await upstashIncr(redisKey(key), windowMs);
+      if (!counted) return limiter.check(key); // Redis fora do ar: degrada para a memória
+      if (counted.count > limit) {
+        // Tentativa negada não conta (não prolonga o bloqueio).
+        void upstashDecr(redisKey(key));
+        return { allowed: false, limit, remaining: 0, retryAfterSeconds: Math.max(1, Math.ceil(counted.ttlMs / 1000)) };
+      }
+      return { allowed: true, limit, remaining: Math.max(0, limit - counted.count), retryAfterSeconds: 0 };
+    },
+    async refundAsync(key) {
+      if (options.name && upstashConfig()) await upstashDecr(redisKey(key));
+      limiter.refund(key);
+    },
     refund(key) {
       const hits = hitsByKey.get(key);
       if (!hits) return;
@@ -85,6 +117,8 @@ export function createRateLimiter(options: RateLimiterOptions): RateLimiter {
       return { allowed: true, limit, remaining: limit - hits.length, retryAfterSeconds: 0 };
     },
   };
+  warnIfMemoryOnly();
+  return limiter;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,14 +152,35 @@ function normalizeIp(raw: string | undefined | null): string | null {
 }
 
 /**
- * IP do cliente para o limitador: PRIMEIRO valor de `x-forwarded-for` (o proxy
- * da plataforma, ex. Vercel, define/sobrescreve esse cabeçalho), depois
- * `x-real-ip`. Valores que não sejam IP válido são ignorados. Fora de uma
- * plataforma confiável o cabeçalho pode ser forjado: coloque um proxy na frente.
+ * IP do cliente para o limitador. NUNCA confia num valor livre do cliente como identidade única:
+ *
+ * 1. Na Vercel (`VERCEL=1`) a plataforma sobrescreve `x-real-ip` e `x-vercel-forwarded-for`: usa-os
+ *    (e ignora `x-forwarded-for`, cujo início o cliente pode preencher).
+ * 2. Fora dela, só atrás de um proxy confiável declarado em `TRUSTED_PROXY_HOPS` (nº de proxies SEUS na frente
+ *    do app): usa o valor de `x-forwarded-for` contado a partir da DIREITA (o que o seu primeiro proxy viu).
+ *    Com `TRUSTED_PROXY_HOPS=1` é o último valor da lista.
+ * 3. Sem nenhuma das duas: em produção os cabeçalhos são ignorados (balde único "unknown": mais restritivo,
+ *    porém seguro) e em desenvolvimento/teste vale o comportamento antigo (1º `x-forwarded-for`, depois
+ *    `x-real-ip`), já que não há proxy nem atacante.
  */
-export function clientIp(headers: Headers): string {
+export function clientIp(headers: Headers, env: Record<string, string | undefined> = process.env): string {
+  if (env.VERCEL === "1" || env.VERCEL === "true") {
+    return (
+      normalizeIp(headers.get("x-real-ip")) ??
+      normalizeIp(headers.get("x-vercel-forwarded-for")?.split(",")[0]) ??
+      "unknown"
+    );
+  }
+
+  const hops = Number.parseInt(env.TRUSTED_PROXY_HOPS ?? "", 10);
+  if (Number.isInteger(hops) && hops >= 1 && hops <= 10) {
+    const list = (headers.get("x-forwarded-for") ?? "").split(",").map((part) => part.trim());
+    return normalizeIp(list[list.length - hops]) ?? "unknown";
+  }
+
+  if (env.NODE_ENV === "production") return "unknown";
+
   const forwarded = normalizeIp(headers.get("x-forwarded-for")?.split(",")[0]);
   if (forwarded) return forwarded;
-  const real = normalizeIp(headers.get("x-real-ip"));
-  return real ?? "unknown";
+  return normalizeIp(headers.get("x-real-ip")) ?? "unknown";
 }

@@ -2,10 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
-import { GENERIC_ERROR_MESSAGE, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
+import { GENERIC_ERROR_MESSAGE, planErrorMessage, RPC_ERROR_MESSAGES, rpcErrorMessage } from "@/lib/errors";
 import { getPublicEnvStatus } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
+import { allowAuthAction } from "@/lib/auth/rate-limit";
+import { sendInviteEmail } from "./invite-email";
 import { getAuditPage, getTeam } from "./queries";
 import {
   auditFiltersSchema,
@@ -31,8 +33,16 @@ type Authorization = { ok: true; ctx: Context } | { ok: false; result: Failure }
 
 const NOT_CONFIGURED: Failure = { ok: false, message: "O Supabase ainda não está configurado neste ambiente." };
 
-const NO_EMAIL_NOTICE =
-  "Nenhum e-mail é enviado. Peça para a pessoa se cadastrar em /entrar com este e-mail e aceitar o convite.";
+const MAIL_FAILED_NOTICE =
+  "E-mail não enviado: peça para a pessoa se cadastrar com este e-mail e aceitar o convite em /entrar. O convite continua válido.";
+const MAIL_NEUTRAL_NOTICE =
+  "Se a pessoa ainda não tem conta, enviamos um e-mail para ela criar o acesso. Quem já tem conta vê o convite ao entrar.";
+
+/** Tenta enviar o e-mail do convite; devolve o aviso (neutro ou de falha) para a UI. Nunca lança. */
+async function mailNotice(restaurantId: string, email: string): Promise<string> {
+  if (!(await allowAuthAction("invite", restaurantId))) return MAIL_FAILED_NOTICE;
+  return (await sendInviteEmail(email)) === "dispatched" ? MAIL_NEUTRAL_NOTICE : MAIL_FAILED_NOTICE;
+}
 
 const EXTRA_MESSAGES: Record<string, string> = {
   invalid_granted: "Valor de permissão inválido.",
@@ -54,6 +64,8 @@ type DbError = { message?: string; code?: string } | null | undefined;
 
 /** Erros do banco -> PT-BR. Mensagens cruas nunca saem daqui. */
 function failure(error: DbError): Failure {
+  const planMessage = planErrorMessage(error);
+  if (planMessage) return { ok: false, message: planMessage };
   const code = error?.code;
   if (code === "PGRST301" || code === "PGRST303") return { ok: false, message: RPC_ERROR_MESSAGES.not_authenticated };
   const extra = Object.keys(EXTRA_MESSAGES).find((key) => error?.message?.includes(key));
@@ -84,7 +96,11 @@ export async function inviteMemberAction(slug: string, input: { email: string; r
   });
   if (error) return failure(error);
   revalidateTeam(ctx);
-  return { ok: true, message: `Convite registrado para ${parsed.data.email}`, warning: NO_EMAIL_NOTICE };
+  return {
+    ok: true,
+    message: `Convite registrado para ${parsed.data.email}`,
+    warning: await mailNotice(ctx.restaurantId, parsed.data.email),
+  };
 }
 
 /** Renova um convite pendente ou convida de novo quem teve o acesso revogado. */
@@ -110,7 +126,7 @@ export async function resendInviteAction(slug: string, membershipId: string): Pr
   });
   if (error) return failure(error);
   revalidateTeam(ctx);
-  return { ok: true, message: "Convite renovado", warning: NO_EMAIL_NOTICE };
+  return { ok: true, message: "Convite renovado", warning: await mailNotice(ctx.restaurantId, email) };
 }
 
 export async function changeMemberRoleAction(slug: string, membershipId: string, role: string): Promise<ActionResult> {

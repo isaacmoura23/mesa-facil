@@ -12,8 +12,13 @@ export function buildLogoPath(restaurantId: string, mimeType: string): string {
 }
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const UUID_EXACT = new RegExp(`^${UUID}$`);
 
-/** O caminho tem exatamente o formato permitido para o logotipo deste restaurante? */
+/**
+ * O caminho tem exatamente o formato permitido para o logotipo deste restaurante? Sem flag `i` (o CHECK do
+ * banco recusa maiúsculas) e com o id validado como UUID antes de entrar no padrão (F-49).
+ */
 export function isOwnLogoPath(path: string, restaurantId: string): boolean {
-  return new RegExp(`^restaurants/${restaurantId}/logo/${UUID}\\.(jpg|png|webp|avif)$`, "i").test(path);
+  if (!UUID_EXACT.test(restaurantId)) return false;
+  return new RegExp(`^restaurants/${restaurantId}/logo/${UUID}[.](jpg|png|webp|avif)$`).test(path);
 }

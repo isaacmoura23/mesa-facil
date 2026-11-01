@@ -2,6 +2,7 @@ import { z } from "zod";
 import { FULFILLMENTS, isUuid, type Fulfillment } from "./schemas";
 import { isValidBrPhone, isValidCep } from "./masks";
 import { MAX_LINES, MAX_NOTES, MAX_QUANTITY } from "./cart";
+import { CONTROL_CHARS_MESSAGE, hasControlChars } from "@/lib/validation/text";
 
 /**
  * Schemas do checkout, compartilhados entre o cliente (feedback imediato) e o
@@ -9,7 +10,7 @@ import { MAX_LINES, MAX_NOTES, MAX_QUANTITY } from "./cart";
  */
 
 const optionalText = (max: number, message: string) =>
-  z.string().trim().max(max, message);
+  z.string().trim().max(max, message).refine((v) => !hasControlChars(v), CONTROL_CHARS_MESSAGE);
 
 
 export const checkoutFormSchema = z
@@ -118,7 +119,7 @@ export const cartQuoteInputSchema = z.object({
         variantId: z.string().refine(isUuid).nullable().optional(),
         quantity: z.number().int().min(1).max(MAX_QUANTITY),
         modifierIds: z.array(z.string().refine(isUuid)).max(60),
-        notes: z.string().max(MAX_NOTES),
+        notes: z.string().max(MAX_NOTES).refine((v) => !hasControlChars(v), CONTROL_CHARS_MESSAGE),
       }),
     )
     .max(MAX_LINES),

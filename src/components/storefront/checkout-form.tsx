@@ -23,6 +23,7 @@ import {
 } from "@/modules/storefront/checkout-schema";
 import { maskCep, maskPhone } from "@/modules/storefront/masks";
 import { createOrderAction } from "@/modules/storefront/order-actions";
+import { TURNSTILE_ENABLED, TurnstileWidget } from "@/components/captcha/turnstile-widget";
 import {
   EMPTY_PAYMENT_FORM,
   changeForCents,
@@ -101,6 +102,8 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
   const [orderErrors, setOrderErrors] = useState<OrderErrorItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
   // Trava síncrona: dois cliques no mesmo tick nunca disparam dois envios.
   const inFlight = useRef(false);
   const [nonce, setNonce] = useState(0);
@@ -172,6 +175,11 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
       return;
     }
 
+    if (TURNSTILE_ENABLED && !captchaToken) {
+      setSubmitMessage("Confirme que você não é um robô (verificação logo acima do botão) e envie de novo.");
+      return;
+    }
+
     const items = toCheckoutItems(cart.lines);
     const form = { ...values, zoneId: values.zoneId };
     // A chave vale para ESTE conteúdo: reenviar o mesmo pedido nunca duplica.
@@ -180,7 +188,7 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
     inFlight.current = true;
     setSubmitting(true);
     try {
-      const response = await createOrderAction({ slug, form, payment, items, idempotencyKey });
+      const response = await createOrderAction({ slug, form, payment, items, idempotencyKey, captchaToken });
       switch (response.status) {
         case "created": {
           setRedirecting(true);
@@ -228,6 +236,9 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
     } finally {
       inFlight.current = false;
       setSubmitting(false);
+      // O token do Turnstile é de uso único: sempre pede um desafio novo depois de enviar.
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     }
   }
 
@@ -558,6 +569,7 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
                 </ul>
               ) : null}
             </div>
+            <TurnstileWidget onToken={setCaptchaToken} resetKey={captchaReset} className="flex justify-center" />
             <Button type="submit" size="lg" fullWidth loading={submitting} disabled={submitting}>
               {quoteTotal !== null ? `Enviar pedido (${formatCents(quoteTotal)})` : "Enviar pedido"}
             </Button>

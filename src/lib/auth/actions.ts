@@ -1,19 +1,21 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { CAPTCHA_MESSAGES, verifyCaptcha } from "@/lib/captcha/turnstile";
 import { getPublicEnvStatus } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { RPC_ERROR_MESSAGES, rpcErrorCode, rpcErrorMessage } from "@/lib/errors";
 import { sanitizeNext } from "@/lib/utils/safe-redirect";
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerRestaurantSchema,
   signupSchema,
   toFieldErrors,
 } from "@/lib/validation/auth";
 import type { FormState } from "./form-state";
+import { allowAuthAction, currentClientIp } from "./rate-limit";
 import { requireUser } from "./guards";
 
 const NOT_CONFIGURED: FormState = {
@@ -27,16 +29,13 @@ function text(formData: FormData, key: string): string {
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * Origem usada nos links dos e-mails de autenticação: SEMPRE `NEXT_PUBLIC_SITE_URL` (S-07). Nunca deduzida
+ * do cabeçalho Host (forjável). Sem a variável o link usa o `site_url` configurado no Supabase Auth.
+ */
 async function resolveOrigin(): Promise<string | null> {
   const status = getPublicEnvStatus();
-  if (status.ok && status.env.siteUrl) return status.env.siteUrl.replace(/\/$/, "");
-
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  if (!host) return null;
-  const local = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
-  const proto = h.get("x-forwarded-proto") ?? (local ? "http" : "https");
-  return `${proto}://${host}`;
+  return status.ok && status.env.siteUrl ? status.env.siteUrl.replace(/[/]$/, "") : null;
 }
 
 function loginErrorMessage(code: string | undefined, status: number | undefined) {
@@ -97,6 +96,19 @@ export async function signupAction(
     return { status: "error", fieldErrors: toFieldErrors(parsed.error), values };
   }
 
+  const ip = await currentClientIp();
+  if (!(await allowAuthAction("signup", ip))) {
+    return {
+      status: "error",
+      message: "Muitas tentativas de cadastro em pouco tempo. Aguarde um pouco e tente de novo.",
+      values,
+    };
+  }
+  const captcha = await verifyCaptcha(text(formData, "cf-turnstile-response"), ip);
+  if (!captcha.ok) {
+    return { status: "error", message: CAPTCHA_MESSAGES[captcha.reason], values };
+  }
+
   const origin = await resolveOrigin();
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -117,10 +129,11 @@ export async function signupAction(
       };
     }
     if (error.code === "user_already_exists") {
+      // S-03: resposta idêntica à de um cadastro novo (sem enumerar contas).
       return {
-        status: "error",
-        message: "Já existe uma conta com este e-mail. Tente entrar.",
-        values,
+        status: "success",
+        message:
+          "Enviamos um link de confirmação para o seu e-mail. Abra a mensagem para ativar a conta e depois entre. Se você já tem conta, use Esqueci minha senha na tela de login.",
       };
     }
     if (error.code === "over_email_send_rate_limit" || error.status === 429) {
@@ -147,6 +160,54 @@ export async function signupAction(
       "Enviamos um link de confirmação para o seu e-mail. Abra a mensagem para ativar a conta e depois entre.",
   };
 }
+
+const FORGOT_NEUTRAL: FormState = {
+  status: "success",
+  message:
+    "Se existir uma conta com este e-mail, enviamos um link para criar uma nova senha. Confira a caixa de entrada e o spam.",
+};
+
+/**
+ * Pede o e-mail de recuperação. A resposta é IDÊNTICA exista a conta ou não (sem enumeração) e o
+ * `redirectTo` sai de NEXT_PUBLIC_SITE_URL, nunca do Host. O callback troca o código e leva a /redefinir-senha.
+ */
+export async function forgotPasswordAction(
+  _previous: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  if (!getPublicEnvStatus().ok) return NOT_CONFIGURED;
+
+  const raw = { email: text(formData, "email") };
+  const parsed = forgotPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: toFieldErrors(parsed.error), values: raw };
+  }
+
+  const ip = await currentClientIp();
+  const email = parsed.data.email.toLowerCase();
+  // Os dois limites contam sempre (resposta neutra mesmo quando o limite é atingido para não vazar nada).
+  const okIp = await allowAuthAction("forgot-ip", ip);
+  const okEmail = await allowAuthAction("forgot-email", email);
+  if (!okIp) {
+    return { status: "error", message: "Muitas tentativas. Aguarde um pouco e tente de novo.", values: raw };
+  }
+
+  const captcha = await verifyCaptcha(text(formData, "cf-turnstile-response"), ip);
+  if (!captcha.ok) return { status: "error", message: CAPTCHA_MESSAGES[captcha.reason], values: raw };
+
+  if (okEmail) {
+    const origin = await resolveOrigin();
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: origin ? `${origin}/auth/callback?next=/redefinir-senha` : undefined,
+    });
+    // Falha do provedor (SMTP, limite) não é revelada: a tela é sempre a mesma.
+    if (error) console.error("[auth] resetPasswordForEmail:", error.code ?? error.status ?? "erro");
+  }
+  return FORGOT_NEUTRAL;
+}
+
+
 
 export async function logoutAction(): Promise<void> {
   if (getPublicEnvStatus().ok) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signupAction } from "@/lib/auth/actions";
 import { initialFormState } from "@/lib/auth/form-state";
 import { signupSchema, toFieldErrors, type FieldErrors } from "@/lib/validation/auth";
+import { TurnstileWidget } from "@/components/captcha/turnstile-widget";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { TextField } from "@/components/ui/input";
@@ -86,6 +87,8 @@ export function SignupForm() {
         required
         error={errors.confirmPassword}
       />
+
+      <TurnstileWidget resetKey={state} className="flex justify-center" />
 
       <Button type="submit" size="lg" fullWidth loading={pending}>
         {pending ? "Criando conta..." : "Criar conta"}

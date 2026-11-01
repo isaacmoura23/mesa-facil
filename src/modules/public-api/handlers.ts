@@ -18,7 +18,7 @@ import {
   parseSlug,
   readLimitedText,
 } from "./http";
-import { clientIp, type RateLimiter } from "./rate-limit";
+import { checkLimit, clientIp, type RateLimiter } from "./rate-limit";
 import {
   normalizeMenu,
   normalizeQuote,
@@ -47,16 +47,18 @@ export type QuoteRpcArgs = {
   zoneId: string | null;
 };
 
+type OrderAttemptResult =
+  | { allowed: true; finish(created: boolean): void }
+  | { allowed: false; retryAfterSeconds: number };
+
 /** Pedidos (Fase 3). Opcional: sem isto as rotas de pedido respondem 500. */
 export type OrdersDeps = {
   /** Cria o pedido (valida de novo; nunca lança). */
-  submit(slug: string, input: unknown): Promise<SubmitOrderResult>;
+  submit(slug: string, input: unknown, meta?: { ip: string }): Promise<SubmitOrderResult>;
   /** Acompanhamento por código público (nunca lança). */
   track(slug: string, publicCode: string): Promise<TrackResult>;
   /** Abre uma tentativa sob o limite estrito (5 pedidos criados/10 min por IP+slug). */
-  beginAttempt(ip: string, slug: string):
-    | { allowed: true; finish(created: boolean): void }
-    | { allowed: false; retryAfterSeconds: number };
+  beginAttempt(ip: string, slug: string): OrderAttemptResult | Promise<OrderAttemptResult>;
   /** Limite de consultas de acompanhamento por IP+slug. */
   trackLimiter: RateLimiter;
 };
@@ -114,8 +116,8 @@ export function createPublicApi(deps: PublicApiDeps) {
 
     const ip = clientIp(request.headers);
     const limiter = typeof bucket === "string" ? deps.limiters[bucket] : bucket;
-    const bySlug = limiter ? limiter.check(`${ip}|${slug}`) : { allowed: true, retryAfterSeconds: 0 };
-    const global = deps.limiters.global.check(ip);
+    const bySlug = limiter ? await checkLimit(limiter, `${ip}|${slug}`) : { allowed: true, retryAfterSeconds: 0 };
+    const global = await checkLimit(deps.limiters.global, ip);
     const limited = !bySlug.allowed ? bySlug : !global.allowed ? global : null;
 
     let decision: CorsDecision;
@@ -309,7 +311,7 @@ export function createPublicApi(deps: PublicApiDeps) {
       });
     }
 
-    const attempt = orders.beginAttempt(clientIp(request.headers), slug);
+    const attempt = await orders.beginAttempt(clientIp(request.headers), slug);
     if (!attempt.allowed) {
       return errorResponse("rate_limited", 429, {
         headers: { ...corsHeaders, "Retry-After": String(attempt.retryAfterSeconds) },
@@ -319,7 +321,11 @@ export function createPublicApi(deps: PublicApiDeps) {
 
     let result: SubmitOrderResult;
     try {
-      result = await orders.submit(slug, { ...parsed.data, idempotencyKey: keyCheck.data });
+      result = await orders.submit(
+        slug,
+        { ...parsed.data, idempotencyKey: keyCheck.data },
+        { ip: clientIp(request.headers) },
+      );
     } catch (error) {
       attempt.finish(false);
       logError("orders", error);
@@ -352,6 +358,8 @@ export function createPublicApi(deps: PublicApiDeps) {
         });
       case "conflict":
         return errorResponse("idempotency_conflict", 409, { headers: corsHeaders });
+      case "captcha":
+        return errorResponse("captcha_failed", 403, { headers: corsHeaders, message: result.message });
       case "not_found":
         return notFound(corsHeaders);
       case "invalid":
@@ -401,7 +409,7 @@ export function createPublicApi(deps: PublicApiDeps) {
     const slug = parseSlug(rawSlug);
     if (!slug) return notFound();
 
-    const limit = deps.limiters.global.check(clientIp(request.headers));
+    const limit = await checkLimit(deps.limiters.global, clientIp(request.headers));
     if (!limit.allowed) {
       return errorResponse("rate_limited", 429, {
         headers: { "Retry-After": String(limit.retryAfterSeconds) },

@@ -443,13 +443,31 @@ async function seedRestaurantData(admin: Admin, k: RestaurantKey, users: Record<
     );
   }
 
-  // Assinatura base (Fase 6): Básico em trial, sempre. Testes da plataforma trocam plano/estado e criam histórico.
+  // Assinatura base (Fases 6 e 8): plano 'demo-ilimitado' (sem limites) ativo e vigente muito além de hoje, para que os
+  // testes de equipe/mesas/produtos/pedidos não esbarrem em SUBSCRIPTION_INACTIVE/PLAN_LIMIT_REACHED. Os testes que
+  // precisam de um estado específico criam o próprio restaurante/plano/assinatura (zz-*).
   must(await admin.from("subscriptions").delete().eq("restaurant_id", rid), "reset subscriptions");
-  const plan = must(await admin.from("plans").select("id").eq("code", "basico").maybeSingle(), "plan");
-  if (plan) {
-    const end = new Date(Date.now() + 14 * 864e5).toISOString();
-    must(await admin.from("subscriptions").insert({ restaurant_id: rid, plan_id: plan.id, status: "trialing", trial_ends_at: end, current_period_end: end }), "subscription");
-  }
+  const plan = must(
+    await admin
+      .from("plans")
+      .upsert(
+        { code: "demo-ilimitado", name: "DEMO Ilimitado", description: "Plano de demonstração sem limites (seed de testes).", price_cents: 0, currency: "BRL", billing_interval: "month", limits: {}, features: {}, is_active: true, sort_order: 999 },
+        { onConflict: "code" },
+      )
+      .select("id")
+      .single(),
+    "plan demo-ilimitado",
+  );
+  must(
+    await admin.from("subscriptions").insert({
+      restaurant_id: rid,
+      plan_id: plan.id,
+      status: "active",
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 3650 * 864e5).toISOString(),
+    }),
+    "subscription",
+  );
 
   return {
     id: rid,
@@ -511,7 +529,7 @@ export async function seedDev(opts: { quiet?: boolean } = {}): Promise<World> {
       const where = d.restaurant ? `${d.role}@${d.restaurant.toUpperCase()}` : d.platformRole ? `plataforma:${d.platformRole}` : "sem vínculo";
       console.log(`    - ${d.email.padEnd(28)} ${where}`);
     }
-    console.log("  por restaurante: 3 categorias, 3 produtos (1 oculto), 1 grupo de adicionais (2), 6 mesas, 1 comanda aberta, 4 pedidos, 1 pagamento, horários, zonas, assinatura trial");
+    console.log("  por restaurante: 3 categorias, 3 produtos (1 oculto), 1 grupo de adicionais (2), 6 mesas, 1 comanda aberta, 4 pedidos, 1 pagamento, horários, zonas, assinatura ativa (plano demo-ilimitado)");
   }
   return world;
 }

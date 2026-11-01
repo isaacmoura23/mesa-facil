@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { getPublicEnvStatus } from "@/lib/env";
-import { GENERIC_ERROR_MESSAGE, RPC_ERROR_MESSAGES } from "@/lib/errors";
+import { GENERIC_ERROR_MESSAGE, planErrorMessage, RPC_ERROR_MESSAGES } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { getTableHistory, sortTables } from "./queries";
@@ -60,6 +60,8 @@ const HAS_HISTORY_MESSAGE =
 
 /** Converte erros do banco/RPC em mensagens PT-BR. Mensagens cruas nunca saem daqui. */
 function failure(error: DbError, fallback: string = GENERIC_ERROR_MESSAGE): Failure {
+  const planMessage = planErrorMessage(error);
+  if (planMessage) return { ok: false, message: planMessage };
   const code = error?.code;
   const message = error?.message ?? "";
   if (message.includes("TABLE_HAS_OPEN_TAB")) return { ok: false, message: HAS_OPEN_TAB_MESSAGE };

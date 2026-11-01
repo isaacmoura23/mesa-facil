@@ -109,6 +109,23 @@ export async function saveWeekHoursAction(slug: string, input: WeekHours): Promi
   }
   const week = parsed.data;
 
+  // Caminho atômico (Fase 8): uma RPC substitui a grade inteira numa transação.
+  const rows = week.flatMap((intervals, weekday) =>
+    intervals.map((interval) => ({ weekday, opens_at: interval.opens, closes_at: interval.closes })),
+  );
+  const atomic = await ctx.supabase.rpc("save_business_hours", { p_restaurant: ctx.restaurantId, p_hours: rows });
+  if (!atomic.error) {
+    revalidateSettings(ctx);
+    return { ok: true, message: "Horários de funcionamento atualizados.", warning: LIVE_CHANGE_WARNING };
+  }
+  // Banco ainda sem a RPC (migração 0132 pendente): usa o salvamento por diferença antigo.
+  if (atomic.error.code !== "PGRST202" && atomic.error.code !== "42883") {
+    if (atomic.error.message.includes("INVALID_BUSINESS_HOURS")) {
+      return { ok: false, message: "Horários inválidos. Revise os intervalos e tente de novo." };
+    }
+    return failure(atomic.error, SAVE_ERROR);
+  }
+
   const current = await ctx.supabase
     .from("business_hours")
     .select("id, weekday, opens_at, closes_at")

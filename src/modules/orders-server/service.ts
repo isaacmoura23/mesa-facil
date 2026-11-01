@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { CAPTCHA_MESSAGES, verifyCaptcha } from "@/lib/captcha/turnstile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/server";
 import { normalizeSlug } from "@/modules/storefront/data";
@@ -27,6 +28,8 @@ export type OrderContext = {
   /** Slug da URL (é normalizado aqui). */
   slug: string;
   source: "storefront" | "api";
+  /** IP do cliente (já confiável) para o Turnstile. */
+  ip?: string;
 };
 
 const created = z.object({
@@ -106,6 +109,11 @@ export async function submitPublicOrder(
     };
   }
   const o: OrderSubmission = parsed.data;
+
+  const captcha = await verifyCaptcha(o.captchaToken, ctx.ip);
+  if (!captcha.ok) {
+    return { status: "captcha", reason: captcha.reason, message: CAPTCHA_MESSAGES[captcha.reason] };
+  }
   const email = o.customer.email?.trim();
   const delivery = o.fulfillmentType === "DELIVERY";
 
@@ -161,6 +169,11 @@ export async function submitPublicOrder(
       }
       if (/restaurant_not_found|restaurant_unavailable/i.test(error.message)) {
         return { status: "not_found" };
+      }
+      for (const code of ["SUBSCRIPTION_INACTIVE", "RATE_LIMITED"]) {
+        if (error.message.includes(code)) {
+          return { status: "rejected", errors: [{ code, field: null, itemIndex: null, message: orderErrorMessage(code) }] };
+        }
       }
       return { status: "error" };
     }

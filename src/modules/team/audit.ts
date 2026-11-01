@@ -116,13 +116,20 @@ const SENSITIVE_KEY = /token|secret|senha|password|passwd|api[-_]?key|authorizat
 
 export type MetadataEntry = { key: string; value: string };
 
+/** JWT (eyJ...), com ou sem "Bearer" e em qualquer posição do texto (F-45). */
+const JWT_LIKE = /(?:bearer\s+)?eyJ[A-Za-z0-9_-]{5,}(?:[.][A-Za-z0-9_-]*){0,2}/gi;
+
+export function maskSecrets(value: string): string {
+  return value.replace(JWT_LIKE, "[oculto]");
+}
+
 /** Defesa em profundidade: o banco já sanitiza, mas nunca exibimos chaves sensíveis. */
 export function safeMetadataEntries(metadata: Record<string, unknown>): MetadataEntry[] {
   const entries: MetadataEntry[] = [];
   for (const [key, raw] of Object.entries(metadata)) {
     if (SENSITIVE_KEY.test(key)) continue;
     let value: string;
-    if (typeof raw === "string") value = raw;
+    if (typeof raw === "string") value = maskSecrets(raw);
     else if (typeof raw === "number" || typeof raw === "boolean") value = String(raw);
     else if (raw === null || raw === undefined) continue;
     else value = "(dados adicionais)";
