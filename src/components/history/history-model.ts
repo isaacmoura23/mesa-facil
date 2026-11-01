@@ -225,3 +225,55 @@ export async function fetchPrintJobs(
     requestedByName: row.requested_by ? (names.get(row.requested_by) ?? null) : null,
   }));
 }
+
+const paymentSchema = z.object({
+  id: z.string(),
+  method: z.string(),
+  amount_cents: z.number().int(),
+  status: z.string(),
+  tendered_cents: z.number().int().nullable(),
+  recorded_by: z.string().nullable(),
+  paid_at: z.string().nullable(),
+  created_at: z.string(),
+});
+
+export type OrderPaymentEntry = z.infer<typeof paymentSchema> & {
+  recordedByName: string | null;
+  /** Troco devolvido (só dinheiro, quando o valor recebido foi informado). */
+  changeCents: number | null;
+};
+
+/**
+ * Pagamentos registrados de um pedido (forma, valor, valor recebido e troco). A leitura é protegida por RLS
+ * (payments.record ou reports.view): quem não tem acesso recebe lista vazia e a seção não aparece.
+ */
+export async function fetchOrderPayments(
+  supabase: AppSupabaseClient,
+  restaurantId: string,
+  orderId: string,
+): Promise<OrderPaymentEntry[]> {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("id, method, amount_cents, status, tendered_cents, recorded_by, paid_at, created_at")
+    .eq("restaurant_id", restaurantId)
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: true })
+    .limit(50);
+  if (error) throw new Error(error.message);
+  const rows = z.array(paymentSchema).catch([]).parse(data);
+  const ids = [...new Set(rows.map((row) => row.recorded_by).filter((id): id is string => Boolean(id)))];
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const profiles = await supabase.from("profiles").select("id, full_name").in("id", ids);
+    if (!profiles.error) {
+      for (const row of z.array(profileSchema).catch([]).parse(profiles.data)) {
+        if (row.full_name) names.set(row.id, row.full_name);
+      }
+    }
+  }
+  return rows.map((row) => ({
+    ...row,
+    recordedByName: row.recorded_by ? (names.get(row.recorded_by) ?? null) : null,
+    changeCents: row.method === "CASH" && row.tendered_cents !== null ? Math.max(row.tendered_cents - row.amount_cents, 0) : null,
+  }));
+}

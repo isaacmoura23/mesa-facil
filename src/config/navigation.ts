@@ -17,7 +17,8 @@ export type IconName =
   | "subscriptions"
   | "support"
   | "audit"
-  | "cash";
+  | "cash"
+  | "sale";
 
 /** Item de navegação já resolvido (serializável para Client Components). */
 export type NavEntry = {
@@ -60,6 +61,7 @@ const OPERACAO_NAV: readonly NavDefinition[] = [
   { segment: "pedidos", label: "Pedidos", icon: "orders", anyOf: ["orders.view"] },
   { segment: "cozinha", label: "Cozinha", icon: "kitchen", anyOf: ["orders.view"] },
   { segment: "mesas", label: "Mesas", icon: "tables", anyOf: ["tables.view"] },
+  { segment: "venda", label: "Venda", icon: "sale", anyOf: ["orders.create"] },
   { segment: "caixa", label: "Caixa", icon: "cash", anyOf: ["cash.view"] },
   { segment: "comandas", label: "Comandas", icon: "tabs", anyOf: ["tabs.view"] },
   { segment: "historico", label: "Histórico", icon: "history", anyOf: ["orders.view"] },
