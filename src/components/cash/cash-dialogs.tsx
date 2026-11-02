@@ -160,7 +160,7 @@ function CloseForm({ onClose, expectedCents, onSubmit }: { onClose: () => void; 
       <TextField label="Dinheiro contado (R$)" inputMode="decimal" autoComplete="off" value={text} onChange={(event) => setText(event.target.value)} error={text.trim() && counted === null ? "Informe um valor, por exemplo 350,00." : undefined} disabled={pending} autoFocus />
       <div aria-live="polite" className="min-h-6 text-sm font-medium">
         {diff === null ? null : diff === 0 ? (
-          <span className="text-accent-soft-fg">Confere: sem diferença.</span>
+          <span className="text-success-soft-fg">Confere: sem diferença.</span>
         ) : diff > 0 ? (
           <span className="text-warning-soft-fg">Sobra {formatMoney(diff)}.</span>
         ) : (

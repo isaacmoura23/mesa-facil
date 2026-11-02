@@ -108,7 +108,7 @@ export function CheckoutSummary({
               {lineErrors.some((e) => VARIANT_FIX_CODES.has(e.code)) ? (
                 <Link
                   href={`/r/${encodeURIComponent(cart.slug)}/produto/${line.productId}`}
-                  className="mt-2 inline-flex h-9 items-center rounded-control px-2 text-sm font-medium text-accent hover:bg-accent-soft"
+                  className="mt-2 inline-flex h-9 items-center rounded-control px-2 text-sm font-medium text-accent-text hover:bg-accent-soft"
                 >
                   Escolher tamanho
                   <span className="sr-only"> de {line.snapshot.name}</span>

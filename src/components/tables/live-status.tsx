@@ -4,7 +4,7 @@ import type { ConnectionState } from "@/modules/operations/types";
 
 const COPY: Record<ConnectionState, { label: string; tone: string }> = {
   connecting: { label: "Conectando...", tone: "bg-surface-2 text-muted" },
-  online: { label: "Ao vivo", tone: "bg-accent-soft text-accent-soft-fg" },
+  online: { label: "Ao vivo", tone: "bg-success-soft text-success-soft-fg" },
   reconnecting: { label: "Reconectando...", tone: "bg-warning-soft text-warning-soft-fg" },
   offline: { label: "Sem conexão", tone: "bg-danger-soft text-danger-soft-fg" },
 };

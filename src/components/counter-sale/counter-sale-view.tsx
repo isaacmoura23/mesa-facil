@@ -377,7 +377,7 @@ function ProductTile({ product, count, onPick }: { product: MenuProduct; count: 
         ) : null}
         <span className="flex flex-1 flex-col gap-1 p-3">
           <span className={cn("line-clamp-2 text-sm font-semibold uppercase leading-snug text-fg", count > 0 && "pr-8")}>{product.name}</span>
-          <span className="mt-auto text-sm font-semibold tabular-nums text-accent">
+          <span className="mt-auto text-sm font-semibold tabular-nums text-accent-text">
             {hasVariants(product) ? <span className="mr-1 text-xs font-normal text-muted">a partir de</span> : null}
             {formatCents(product.priceCents)}
           </span>

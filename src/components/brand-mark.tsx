@@ -20,9 +20,9 @@ export function BrandMark({ href = "/", className, compact = false }: BrandMarkP
       {/* Logo em fundo branco: aparece igual no tema claro e no escuro. */}
       <span
         aria-hidden="true"
-        className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-control bg-white ring-1 ring-line"
+        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-line"
       >
-        <Image src="/logo-small.png" alt="" width={36} height={36} className="size-full object-contain" />
+        <Image src="/logo-small.png" alt="" width={44} height={44} className="size-full object-contain p-0.5" />
       </span>
       {compact ? null : (
         <span className="text-base font-semibold tracking-tight text-fg">
