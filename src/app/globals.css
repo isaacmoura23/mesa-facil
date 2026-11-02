@@ -1,27 +1,35 @@
 @import "tailwindcss";
 
 /*
- * Tokens de tema. Um único acento (verde-floresta), neutros frios e
- * semânticas de status. O tema segue prefers-color-scheme.
- * Contraste conferido: texto/fundo >= 7:1, muted/fundo >= 4.5:1,
- * accent-foreground/accent >= 4.5:1 nos dois temas.
+ * Tokens de tema, tirados da logo: azul-marinho (#0f2238) e laranja (#f2720c).
+ * Laranja = destaque da marca (botões, item ativo, foco, preços); azul-marinho = texto
+ * e neutros; VERDE é só para "sucesso" (alertas, concluído, ao vivo), para o laranja
+ * não passar a significar sucesso. `accent-text` é o laranja escurecido para TEXTO sobre
+ * fundo claro. O tema segue prefers-color-scheme (ou o botão de tema).
+ * Contraste: texto/fundo >= 7:1, muted/fundo >= 4.5:1, accent-fg/accent >= 4.5:1
+ * e accent-text/fundo >= 4.5:1 nos dois temas.
  */
 :root {
   color-scheme: light dark;
 
-  --bg: #f6f7f8;
-  --surface: #fcfcfd;
-  --surface-2: #eff1f3;
-  --line: #dcdfe4;
-  --line-strong: #c4c9d0;
-  --fg: #16181d;
-  --muted: #4b5260;
+  --bg: #f4f6f9;
+  --surface: #fcfdfe;
+  --surface-2: #ebeff4;
+  --line: #d7dee8;
+  --line-strong: #bcc7d5;
+  --fg: #0f2238;
+  --muted: #475a70;
 
-  --accent: #0b6b4b;
-  --accent-hover: #095a3f;
-  --accent-fg: #f4fbf8;
-  --accent-soft: #e2f4ec;
-  --accent-soft-fg: #08523a;
+  --accent: #f2720c;
+  --accent-hover: #f98a33;
+  --accent-fg: #0f2238;
+  --accent-soft: #fdeedf;
+  --accent-soft-fg: #7a3606;
+  --accent-text: #b4500a;
+
+  --success: #157347;
+  --success-soft: #e1f3e8;
+  --success-soft-fg: #0d5a36;
 
   --danger: #b42318;
   --danger-hover: #971c12;
@@ -29,31 +37,36 @@
   --danger-soft: #fdeceb;
   --danger-soft-fg: #912018;
 
-  --warning-soft: #fdf3dc;
-  --warning-soft-fg: #7a4a04;
+  --warning-soft: #fcf3cf;
+  --warning-soft-fg: #6b4e00;
 
-  --info-soft: #e6eefb;
+  --info-soft: #e3edfb;
   --info-soft-fg: #1f4a96;
 
-  --ring: #0b6b4b;
-  --shadow-tint: 22 24 29;
+  --ring: #d9620a;
+  --shadow-tint: 15 34 56;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d0f12;
-    --surface: #15181c;
-    --surface-2: #1d2126;
-    --line: #2a2f36;
-    --line-strong: #3a414a;
-    --fg: #eceef1;
-    --muted: #a3abb7;
+    --bg: #0a1220;
+    --surface: #101a2b;
+    --surface-2: #17233a;
+    --line: #243350;
+    --line-strong: #334766;
+    --fg: #e9eef6;
+    --muted: #9fb0c6;
 
-    --accent: #3fcf9b;
-    --accent-hover: #5fdcb0;
-    --accent-fg: #04241a;
-    --accent-soft: #12332a;
-    --accent-soft-fg: #8ee6c3;
+    --accent: #ff8a2b;
+    --accent-hover: #ff9d4d;
+    --accent-fg: #0a1220;
+    --accent-soft: #3a2310;
+    --accent-soft-fg: #ffb877;
+    --accent-text: #ff9a45;
+
+    --success: #3ddc97;
+    --success-soft: #123524;
+    --success-soft-fg: #8ee6b5;
 
     --danger: #f2766b;
     --danger-hover: #f79189;
@@ -61,13 +74,13 @@
     --danger-soft: #3a1714;
     --danger-soft-fg: #ffb4ad;
 
-    --warning-soft: #3a2a0b;
-    --warning-soft-fg: #f4c767;
+    --warning-soft: #3a300b;
+    --warning-soft-fg: #f4d467;
 
-    --info-soft: #172640;
+    --info-soft: #172a4d;
     --info-soft-fg: #a9c4f5;
 
-    --ring: #3fcf9b;
+    --ring: #ff8a2b;
     --shadow-tint: 0 0 0;
   }
 }
@@ -79,19 +92,24 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0d0f12;
-  --surface: #15181c;
-  --surface-2: #1d2126;
-  --line: #2a2f36;
-  --line-strong: #3a414a;
-  --fg: #eceef1;
-  --muted: #a3abb7;
+  --bg: #0a1220;
+  --surface: #101a2b;
+  --surface-2: #17233a;
+  --line: #243350;
+  --line-strong: #334766;
+  --fg: #e9eef6;
+  --muted: #9fb0c6;
 
-  --accent: #3fcf9b;
-  --accent-hover: #5fdcb0;
-  --accent-fg: #04241a;
-  --accent-soft: #12332a;
-  --accent-soft-fg: #8ee6c3;
+  --accent: #ff8a2b;
+  --accent-hover: #ff9d4d;
+  --accent-fg: #0a1220;
+  --accent-soft: #3a2310;
+  --accent-soft-fg: #ffb877;
+  --accent-text: #ff9a45;
+
+  --success: #3ddc97;
+  --success-soft: #123524;
+  --success-soft-fg: #8ee6b5;
 
   --danger: #f2766b;
   --danger-hover: #f79189;
@@ -99,13 +117,13 @@
   --danger-soft: #3a1714;
   --danger-soft-fg: #ffb4ad;
 
-  --warning-soft: #3a2a0b;
-  --warning-soft-fg: #f4c767;
+  --warning-soft: #3a300b;
+  --warning-soft-fg: #f4d467;
 
-  --info-soft: #172640;
+  --info-soft: #172a4d;
   --info-soft-fg: #a9c4f5;
 
-  --ring: #3fcf9b;
+  --ring: #ff8a2b;
   --shadow-tint: 0 0 0;
 }
 
@@ -122,6 +140,10 @@
   --color-accent-fg: var(--accent-fg);
   --color-accent-soft: var(--accent-soft);
   --color-accent-soft-fg: var(--accent-soft-fg);
+  --color-accent-text: var(--accent-text);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-fg: var(--success-soft-fg);
   --color-danger: var(--danger);
   --color-danger-hover: var(--danger-hover);
   --color-danger-fg: var(--danger-fg);

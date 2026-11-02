@@ -309,7 +309,7 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
                   ) : null}
                 </div>
                 <div className="flex items-center gap-3">
-                  <p className={`text-base font-semibold tabular-nums ${m.direction === "IN" ? "text-accent-soft-fg" : "text-danger"}`}>
+                  <p className={`text-base font-semibold tabular-nums ${m.direction === "IN" ? "text-success-soft-fg" : "text-danger"}`}>
                     {m.direction === "IN" ? "+" : "−"}{formatMoney(m.amount_cents)}
                   </p>
                   {canApprove && (REVERSIBLE.includes(m.kind) || m.pending_refund) && !m.reversed ? (
@@ -336,7 +336,7 @@ export function CashView({ restaurantId, restaurantName, userId, canOperate, can
                 <div className="text-right tabular-nums">
                   <p className="text-fg">Abertura {formatMoney(s.opening_cents)} · esperado {s.expected_cents !== null ? formatMoney(s.expected_cents) : "—"}</p>
                   {s.status === "CLOSED" && s.counted_cents !== null && s.difference_cents !== null ? (
-                    <p className={s.difference_cents === 0 ? "text-accent-soft-fg" : s.difference_cents < 0 ? "text-danger" : "text-warning-soft-fg"}>
+                    <p className={s.difference_cents === 0 ? "text-success-soft-fg" : s.difference_cents < 0 ? "text-danger" : "text-warning-soft-fg"}>
                       Contado {formatMoney(s.counted_cents)} · {s.difference_cents === 0 ? "confere" : s.difference_cents < 0 ? `falta ${formatMoney(-s.difference_cents)}` : `sobra ${formatMoney(s.difference_cents)}`}
                     </p>
                   ) : <Badge tone="info">Aberto</Badge>}

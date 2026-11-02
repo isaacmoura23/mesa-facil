@@ -81,7 +81,7 @@ export function RestaurantSwitcher({
                   <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
                   {item.pending ? <Badge tone="warning">Aguardando</Badge> : null}
                   {current ? (
-                    <Check aria-hidden="true" className="size-4 shrink-0 text-accent" />
+                    <Check aria-hidden="true" className="size-4 shrink-0 text-accent-text" />
                   ) : null}
                 </Link>
               </li>

@@ -40,13 +40,13 @@ export function RecentOrders({ slug }: { slug: string }) {
           <li key={order.publicCode}>
             <Link
               href={`/r/${encodeURIComponent(order.slug)}/pedido/${encodeURIComponent(order.publicCode)}`}
-              className="flex min-h-11 items-center justify-between gap-3 rounded-control py-2 text-sm hover:text-accent"
+              className="flex min-h-11 items-center justify-between gap-3 rounded-control py-2 text-sm hover:text-accent-text"
             >
               <span className="font-medium text-fg">
                 {order.orderNumber !== null ? `Pedido nº ${order.orderNumber}` : "Pedido"}
               </span>
               <span className="text-muted tabular-nums">{formatDateTime(order.at, null)}</span>
-              <span className="font-medium text-accent">Acompanhar</span>
+              <span className="font-medium text-accent-text">Acompanhar</span>
             </Link>
           </li>
         ))}

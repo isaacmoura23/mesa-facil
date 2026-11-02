@@ -259,7 +259,7 @@ export function CheckoutForm({ slug, settings }: CheckoutFormProps) {
   if (redirecting) {
     return (
       <div role="status" className="flex flex-col items-center gap-3 py-16 text-center">
-        <CircleCheck aria-hidden="true" className="size-10 text-accent" />
+        <CircleCheck aria-hidden="true" className="size-10 text-success" />
         <p className="text-lg font-semibold text-fg">Pedido enviado</p>
         <p className="text-sm text-muted">Abrindo o acompanhamento do seu pedido...</p>
       </div>

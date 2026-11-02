@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { UtensilsCrossed } from "lucide-react";
 import { brand } from "@/config/brand";
 import { cn } from "@/lib/utils/cn";
 
@@ -17,11 +17,12 @@ export function BrandMark({ href = "/", className, compact = false }: BrandMarkP
       className={cn("inline-flex items-center gap-2.5 rounded-control", className)}
       aria-label={compact ? brand.name : undefined}
     >
+      {/* Logo em fundo branco: aparece igual no tema claro e no escuro. */}
       <span
         aria-hidden="true"
-        className="flex size-8 items-center justify-center rounded-control bg-accent text-accent-fg"
+        className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-line"
       >
-        <UtensilsCrossed className="size-[1.125rem]" />
+        <Image src="/logo-small.png" alt="" width={44} height={44} className="size-full object-contain p-0.5" />
       </span>
       {compact ? null : (
         <span className="text-base font-semibold tracking-tight text-fg">

@@ -6,7 +6,7 @@ export type AlertTone = "danger" | "success" | "info" | "warning";
 
 const tones: Record<AlertTone, { box: string; icon: typeof Info }> = {
   danger: { box: "bg-danger-soft text-danger-soft-fg", icon: CircleAlert },
-  success: { box: "bg-accent-soft text-accent-soft-fg", icon: CircleCheck },
+  success: { box: "bg-success-soft text-success-soft-fg", icon: CircleCheck },
   info: { box: "bg-info-soft text-info-soft-fg", icon: Info },
   warning: { box: "bg-warning-soft text-warning-soft-fg", icon: TriangleAlert },
 };

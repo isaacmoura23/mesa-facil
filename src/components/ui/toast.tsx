@@ -32,7 +32,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 const toneStyles: Record<ToastTone, string> = {
   info: "border-line bg-surface text-fg",
-  success: "border-transparent bg-accent-soft text-accent-soft-fg",
+  success: "border-transparent bg-success-soft text-success-soft-fg",
   danger: "border-transparent bg-danger-soft text-danger-soft-fg",
 };
 

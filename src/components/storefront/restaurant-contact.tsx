@@ -5,7 +5,7 @@ import type { PublicMenu } from "@/modules/storefront/schemas";
 type Restaurant = PublicMenu["restaurant"];
 
 const linkClass =
-  "inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-sm font-medium text-fg hover:bg-surface-2 hover:text-accent";
+  "inline-flex min-h-11 items-center gap-2 rounded-control px-2 text-sm font-medium text-fg hover:bg-surface-2 hover:text-accent-text";
 
 export function whatsappHref(digits: string): string {
   return `https://wa.me/${digits}`;
@@ -21,7 +21,7 @@ export function HeaderWhatsApp({ restaurant }: { restaurant: Restaurant }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`Falar com ${restaurant.name} no WhatsApp (abre em nova aba)`}
-      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-control px-3 text-sm font-medium text-fg hover:bg-surface-2 hover:text-accent"
+      className="flex h-11 shrink-0 items-center justify-center gap-2 rounded-control px-3 text-sm font-medium text-fg hover:bg-surface-2 hover:text-accent-text"
     >
       <MessageCircle aria-hidden="true" className="size-5" />
       <span className="hidden sm:inline">WhatsApp</span>

@@ -126,7 +126,7 @@ export function MfaSetup({ verified, unverifiedIds, aal2, next }: Props) {
               className="flex items-center justify-between gap-3 rounded-control border border-line bg-surface-2 px-4 py-3"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-accent" />
+                <ShieldCheck aria-hidden="true" className="size-5 shrink-0 text-success" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-fg">Aplicativo autenticador</p>
                   <p className="text-xs text-muted">

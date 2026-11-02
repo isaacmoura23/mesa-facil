@@ -101,7 +101,7 @@ export function ProductCard({ slug, product }: ProductCardProps) {
           </button>
         ) : null}
         {orderable && (hasGroups || sized) ? (
-          <span aria-hidden="true" className="ml-auto text-sm font-medium text-accent">
+          <span aria-hidden="true" className="ml-auto text-sm font-medium text-accent-text">
             {sized ? "Escolher tamanho" : "Personalizar"}
           </span>
         ) : null}

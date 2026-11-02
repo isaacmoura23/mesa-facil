@@ -5,7 +5,8 @@ export type BadgeTone = "neutral" | "accent" | "warning" | "danger" | "info";
 
 const tones: Record<BadgeTone, string> = {
   neutral: "bg-surface-2 text-muted border-line",
-  accent: "bg-accent-soft text-accent-soft-fg border-transparent",
+  // "accent" é o nome histórico do tom POSITIVO (ativo, concluído, livre): é VERDE (sucesso), não o laranja da marca.
+  accent: "bg-success-soft text-success-soft-fg border-transparent",
   warning: "bg-warning-soft text-warning-soft-fg border-transparent",
   danger: "bg-danger-soft text-danger-soft-fg border-transparent",
   info: "bg-info-soft text-info-soft-fg border-transparent",
