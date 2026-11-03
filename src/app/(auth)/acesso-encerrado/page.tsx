@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthShell, AuthSkeleton } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { logoutAction } from "@/lib/auth/actions";
@@ -18,9 +19,17 @@ function first(value: string | string[] | undefined): string | undefined {
  * Explica a quem teve o acesso revogado o que aconteceu. O vínculo é conferido de novo aqui (o `?r=` é só uma
  * dica de qual restaurante); sem acesso revogado a essa conta, a página não existe (404).
  */
-export default async function AccessEndedPage(props: PageProps<"/acesso-encerrado">) {
+export default function AccessEndedPage(props: PageProps<"/acesso-encerrado">) {
+  return (
+    <Suspense fallback={<AuthSkeleton />}>
+      <AccessEndedContent searchParams={props.searchParams} />
+    </Suspense>
+  );
+}
+
+async function AccessEndedContent({ searchParams }: { searchParams: PageProps<"/acesso-encerrado">["searchParams"] }) {
   await requireUser("/acesso-encerrado");
-  const params = await props.searchParams;
+  const params = await searchParams;
   const slug = first(params.r)?.trim().toLowerCase();
   const revoked = await getMyRevokedRestaurants();
   const restaurant = (slug ? revoked.find((item) => item.slug === slug) : undefined) ?? revoked[0];
