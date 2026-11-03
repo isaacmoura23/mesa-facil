@@ -11,11 +11,11 @@ import { FulfillmentBadge, StatusBadge } from "@/components/operations/status-ba
 import { createClient } from "@/lib/supabase/client";
 import type { AppSupabaseClient } from "@/lib/supabase/types";
 import { formatDateTime, formatMoney } from "@/modules/operations/format";
-import { PAYMENT_METHOD_LABELS } from "@/modules/operations/types";
 import {
   cursorOf,
   fetchHistoryPage,
   HISTORY_PAGE_SIZE,
+  paymentSummary,
   type HistoryFilters,
   type HistoryRow,
 } from "./history-model";
@@ -138,9 +138,7 @@ export function HistoryResults({ restaurantId, filters, onOpen, onLoaded }: Hist
       ) : null}
       <ul className="flex flex-col gap-2">
         {rows.map((row) => {
-          const payment = row.payment_method_intent
-            ? (PAYMENT_METHOD_LABELS[row.payment_method_intent] ?? row.payment_method_intent)
-            : null;
+          const { declared, received, differs } = paymentSummary(row);
           return (
             <li key={row.id}>
               <button
@@ -156,7 +154,12 @@ export function HistoryResults({ restaurantId, filters, onOpen, onLoaded }: Hist
                 <p className="order-last col-span-2 flex flex-wrap items-center gap-1.5 sm:order-none sm:col-span-1">
                   <StatusBadge status={row.status} />
                   <FulfillmentBadge type={row.fulfillment_type} label={row.table_label} />
-                  {payment ? <Badge tone="neutral">{payment}</Badge> : null}
+                  {received ? <Badge tone="accent">Pago: {received}</Badge> : null}
+                  {declared && (!received || differs) ? (
+                    <Badge tone={differs ? "warning" : "neutral"}>
+                      {received ? `Cliente escolheu: ${declared}` : declared}
+                    </Badge>
+                  ) : null}
                 </p>
                 <p className="text-right text-lg font-semibold tabular-nums text-fg">{formatMoney(row.total_cents)}</p>
               </button>

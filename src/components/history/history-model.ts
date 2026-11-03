@@ -10,6 +10,7 @@ import {
   type FulfillmentType,
   type OrderStatus,
 } from "@/modules/operations/types";
+import { paymentMethodLabel } from "@/modules/tab-billing/types";
 import { DOCUMENT_LABELS, type PrintDocumentType } from "@/modules/printing/types";
 
 /** Modelo, leituras (zod) e exportação do histórico de pedidos. Somente leitura, protegido por RLS (orders.view). */
@@ -79,7 +80,10 @@ const listRowSchema = z.object({
   total_cents: z.number().int(),
   created_at: z.string(),
 });
-export type HistoryRow = z.infer<typeof listRowSchema>;
+export type HistoryRow = z.infer<typeof listRowSchema> & {
+  /** Formas de pagamento REALMENTE recebidas (pagamentos PAID). Vazio/ausente: nada recebido ou sem permissão para ver. */
+  paid_methods?: string[];
+};
 
 const LIST_COLUMNS =
   "id, order_number, fulfillment_type, status, payment_status, payment_method_intent, table_label, total_cents, created_at";
@@ -119,7 +123,52 @@ export async function fetchHistoryPage(
   }
   const { data, error } = await request;
   if (error) throw new Error(error.message);
-  return parseRows(data);
+  return attachPaidMethods(supabase, restaurantId, parseRows(data));
+}
+
+/**
+ * Junta a forma de pagamento recebida de verdade a cada pedido da página. A leitura de `payments` é protegida por
+ * RLS (payments.record ou reports.view): sem acesso (ou em caso de erro) a lista segue só com a forma declarada.
+ */
+async function attachPaidMethods(
+  supabase: AppSupabaseClient,
+  restaurantId: string,
+  rows: HistoryRow[],
+): Promise<HistoryRow[]> {
+  if (rows.length === 0) return rows;
+  const { data, error } = await supabase
+    .from("payments")
+    .select("order_id, method")
+    .eq("restaurant_id", restaurantId)
+    .eq("status", "PAID")
+    .in("order_id", rows.map((row) => row.id))
+    .limit(rows.length * 8);
+  if (error) return rows;
+  const parsed = z.array(z.object({ order_id: z.string().nullable(), method: z.string() })).catch([]).parse(data);
+  const byOrder = new Map<string, string[]>();
+  for (const item of parsed) {
+    if (!item.order_id) continue;
+    const list = byOrder.get(item.order_id) ?? [];
+    if (!list.includes(item.method)) list.push(item.method);
+    byOrder.set(item.order_id, list);
+  }
+  return rows.map((row) => (byOrder.has(row.id) ? { ...row, paid_methods: byOrder.get(row.id) } : row));
+}
+
+/** A forma declarada pelo cliente (CASH/PIX/CARD) bate com o que foi recebido? CARD cobre crédito e débito. */
+function declaredMatches(declared: string, received: string): boolean {
+  return declared === "CARD" ? received === "CREDIT" || received === "DEBIT" : declared === received;
+}
+
+/** Resumo de pagamento de uma linha: o que foi recebido e se difere do que o cliente declarou. */
+export function paymentSummary(row: HistoryRow): { declared: string | null; received: string | null; differs: boolean } {
+  const declared = row.payment_method_intent ? (PAYMENT_METHOD_LABELS[row.payment_method_intent] ?? row.payment_method_intent) : null;
+  const methods = row.paid_methods ?? [];
+  const received = methods.length > 0 ? methods.map(paymentMethodLabel).join(" + ") : null;
+  const differs = Boolean(
+    row.payment_method_intent && methods.length > 0 && !methods.every((m) => declaredMatches(row.payment_method_intent as string, m)),
+  );
+  return { declared, received, differs };
 }
 
 export function cursorOf(rows: HistoryRow[]): HistoryCursor | null {
@@ -146,7 +195,7 @@ export async function fetchAllForExport(
 
 /** CSV pt-BR (separador ";" e vírgula decimal, com BOM para o Excel). Só campos não sensíveis. */
 export function buildCsv(rows: HistoryRow[]): string {
-  const header = ["Numero", "Data e hora", "Modalidade", "Estado", "Total (R$)", "Forma de pagamento declarada"];
+  const header = ["Numero", "Data e hora", "Modalidade", "Estado", "Total (R$)", "Forma de pagamento declarada", "Forma de pagamento recebida"];
   const lines = rows.map((row) =>
     [
       String(row.order_number),
@@ -154,7 +203,8 @@ export function buildCsv(rows: HistoryRow[]): string {
       FULFILLMENT_LABELS[row.fulfillment_type],
       STATUS_LABELS[row.status],
       (row.total_cents / 100).toFixed(2).replace(".", ","),
-      row.payment_method_intent ? (PAYMENT_METHOD_LABELS[row.payment_method_intent] ?? row.payment_method_intent) : "",
+      paymentSummary(row).declared ?? "",
+      paymentSummary(row).received ?? "",
     ]
       .map(csvCell)
       .join(";"),
