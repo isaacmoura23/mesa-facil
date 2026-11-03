@@ -2,7 +2,7 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "./session";
 import { getMfaState, isPlatformMfaRequired } from "./mfa";
-import { getMyPermissions, getMyRestaurants, isPlatformAdmin } from "./rpc";
+import { getMyPermissions, getMyRestaurants, getMyRevokedRestaurants, isPlatformAdmin } from "./rpc";
 import { areaHomePath, canEnterArea, hasAny } from "./permissions";
 import type {
   AppArea,
@@ -14,6 +14,7 @@ import type {
 import { sanitizeNext } from "@/lib/utils/safe-redirect";
 
 export const NO_ACCESS_PATH = "/sem-acesso";
+export const ACCESS_ENDED_PATH = "/acesso-encerrado";
 
 function loginPath(nextPath?: string): string {
   const next = sanitizeNext(nextPath);
@@ -89,7 +90,14 @@ export async function requireRestaurantAccess(
 
   const restaurants = await getMyRestaurants();
   const restaurant = restaurants.find((item) => item.slug === normalizedSlug);
-  if (!restaurant) notFound();
+  if (!restaurant) {
+    // Acesso revogado: explica o que houve (a tela confere o vínculo de novo; o slug aqui é só uma dica).
+    const revoked = await getMyRevokedRestaurants();
+    if (revoked.some((item) => item.slug === normalizedSlug)) {
+      redirect(`${ACCESS_ENDED_PATH}?r=${encodeURIComponent(normalizedSlug)}`);
+    }
+    notFound();
+  }
 
   // Restaurante pendente (aguardando aprovação) ou suspenso: volta ao seletor
   // (/entrar), que explica a situação. Só restaurantes ativos abrem o painel.

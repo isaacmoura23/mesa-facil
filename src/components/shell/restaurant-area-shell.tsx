@@ -49,7 +49,7 @@ export async function RestaurantAreaShell({
 
   const nav =
     area === "app"
-      ? buildAppNav(restaurant.slug, access.canAny)
+      ? buildAppNav(restaurant.slug, access.canAny, role)
       : buildOperacaoNav(restaurant.slug, access.canAny);
 
   const otherArea: AppArea = area === "app" ? "operacao" : "app";

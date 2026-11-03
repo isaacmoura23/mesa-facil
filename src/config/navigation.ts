@@ -1,4 +1,4 @@
-import type { Permission } from "@/lib/auth/types";
+import type { Permission, RestaurantRole } from "@/lib/auth/types";
 import type { NavBadgeKey } from "@/modules/operations/nav-badges";
 
 export type IconName =
@@ -38,6 +38,8 @@ type NavDefinition = {
   icon: IconName;
   /** Basta UMA das permissões. Sem valor: visível a todos do ambiente. */
   anyOf?: readonly Permission[];
+  /** Papéis que também veem o item mesmo sem a permissão (ex.: gerente vê a Equipe em modo leitura). */
+  orRoles?: readonly RestaurantRole[];
   readOnly?: boolean;
   /** Selo de contagem e as permissões (basta UMA) de quem pode agir sobre ele. */
   badge?: { key: NavBadgeKey; anyOf: readonly Permission[] };
@@ -56,7 +58,7 @@ const APP_NAV: readonly NavDefinition[] = [
   { segment: "comandas", label: "Comandas", icon: "tabs", anyOf: ["tabs.view"], readOnly: true },
   { segment: "clientes", label: "Clientes", icon: "customers", anyOf: ["reports.view"] },
   { segment: "relatorios", label: "Relatórios", icon: "reports", anyOf: ["reports.view"] },
-  { segment: "equipe", label: "Equipe", icon: "team", anyOf: ["team.manage"] },
+  { segment: "equipe", label: "Equipe", icon: "team", anyOf: ["team.manage"], orRoles: ["manager"] },
   { segment: "restaurante", label: "Restaurante", icon: "restaurant", anyOf: ["restaurant.settings.manage"] },
   { segment: "configuracoes", label: "Configurações", icon: "settings", anyOf: ["restaurant.settings.manage"] },
 ];
@@ -98,9 +100,10 @@ function resolve(
   definitions: readonly NavDefinition[],
   basePath: string,
   canAny: (permissions: readonly Permission[]) => boolean,
+  role?: RestaurantRole,
 ): NavEntry[] {
   return definitions
-    .filter((item) => !item.anyOf || canAny(item.anyOf))
+    .filter((item) => !item.anyOf || canAny(item.anyOf) || (role !== undefined && item.orRoles?.includes(role) === true))
     .map((item) => ({
       href: `${basePath}/${item.segment}`,
       label: item.label,
@@ -114,8 +117,9 @@ function resolve(
 export function buildAppNav(
   slug: string,
   canAny: (permissions: readonly Permission[]) => boolean,
+  role?: RestaurantRole,
 ): NavEntry[] {
-  return resolve(APP_NAV, `/app/${encodeURIComponent(slug)}`, canAny);
+  return resolve(APP_NAV, `/app/${encodeURIComponent(slug)}`, canAny, role);
 }
 
 /** Itens de /operacao/[slug] filtrados pelas permissões efetivas do usuário. */

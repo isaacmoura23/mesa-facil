@@ -77,6 +77,18 @@ export const getMyRestaurants = cache(async (): Promise<MyRestaurant[]> => {
   return restaurants;
 });
 
+/**
+ * Restaurantes ativos em que o usuário teve o acesso revogado (só nome e slug), para explicar a situação
+ * em vez de mostrar "página não encontrada". Falha na leitura = lista vazia (cai no 404 de sempre).
+ */
+export const getMyRevokedRestaurants = cache(async (): Promise<{ slug: string; name: string }[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("my_revoked_restaurants");
+  if (error || !Array.isArray(data)) return [];
+  const parsed = z.array(z.object({ slug: z.string(), name: z.string() })).safeParse(data);
+  return parsed.success ? parsed.data : [];
+});
+
 export const getPendingInvitations = cache(
   async (): Promise<PendingInvitation[]> => {
     const supabase = await createClient();

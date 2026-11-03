@@ -25,6 +25,16 @@ export async function getTeam(restaurantId: string): Promise<TeamResult> {
   return { ok: true, members: parsed.data };
 }
 
+/** Equipe SOMENTE LEITURA (dono e gerente) via `list_team_basic`: nome, papel e situação, sem e-mail nem permissões. */
+export async function getTeamBasic(restaurantId: string): Promise<TeamResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_team_basic", { p_restaurant: restaurantId });
+  if (error) return { ok: false, message: TEAM_ERROR };
+  const parsed = teamPayloadSchema.safeParse(data);
+  if (!parsed.success) return { ok: false, message: TEAM_ERROR };
+  return { ok: true, members: parsed.data };
+}
+
 /** Uma página do histórico (`list_audit_logs`, paginação keyset via `p_before`). */
 export async function getAuditPage(
   restaurantId: string,
