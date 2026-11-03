@@ -17,6 +17,8 @@ type ShellFrameProps = {
   navFooter?: ReactNode;
   /** Aviso exibido acima do conteúdo (ex.: restaurante aguardando ativação). */
   banner?: ReactNode;
+  /** Marca do restaurante (nome e logo) no topo; sem isso, aparece a marca do Mesa Fácil. */
+  brand?: { name: string; logoUrl: string | null };
   children: ReactNode;
 };
 
@@ -31,6 +33,7 @@ export function ShellFrame({
   headerEnd,
   navFooter,
   banner,
+  brand,
   children,
 }: ShellFrameProps) {
   const navLabel = `Navegação de ${areaLabel.toLowerCase()}`;
@@ -44,7 +47,7 @@ export function ShellFrame({
         Ir para o conteúdo
       </a>
 
-      <DesktopSidebar areaLabel={areaLabel} nav={nav} navLabel={navLabel} navFooter={navFooter} />
+      <DesktopSidebar areaLabel={areaLabel} nav={nav} navLabel={navLabel} navFooter={navFooter} brand={brand} />
 
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         {/*
@@ -55,7 +58,7 @@ export function ShellFrame({
         <header className="sticky top-0 z-30 shrink-0 border-b border-line bg-surface/95 backdrop-blur lg:border-b-0 lg:bg-bg/90 lg:pt-6 lg:pr-6 lg:pb-2">
           <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:h-[4.75rem] lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:shadow-[var(--shadow-pop)]">
             <div className="flex min-w-0 items-center gap-2">
-              <BrandMark href="/entrar" compact className="lg:hidden" />
+              <BrandMark href="/entrar" compact className="lg:hidden" restaurant={brand} />
               {headerStart}
             </div>
             <div className="flex shrink-0 items-center gap-1">

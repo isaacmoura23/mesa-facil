@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
 import { getPublicEnvStatus } from "@/lib/env";
+import { resolveRestaurantBySlug } from "@/lib/auth/rpc";
+import { publicImageUrl } from "@/lib/storage";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { ROLE_LABELS, areaHomePath, homePathFor } from "@/lib/auth/permissions";
 import type { AppArea } from "@/lib/auth/types";
@@ -41,6 +43,10 @@ export async function RestaurantAreaShell({
   const access = await requireRestaurantAccess(slug, { area });
   const { restaurant, role } = access;
 
+  // Logo cadastrada do restaurante (leitura pública; se falhar, mostra a inicial do nome).
+  const profile = await resolveRestaurantBySlug(restaurant.slug).catch(() => null);
+  const brand = { name: restaurant.name, logoUrl: publicImageUrl(profile?.logo_path) };
+
   const nav =
     area === "app"
       ? buildAppNav(restaurant.slug, access.canAny)
@@ -62,6 +68,7 @@ export async function RestaurantAreaShell({
     <NavBadgesProvider restaurantId={restaurant.restaurant_id} keys={badgeKeys}>
     <ShellFrame
       areaLabel={AREA_LABEL[area]}
+      brand={brand}
       nav={nav}
       banner={<PlanBanners restaurantId={restaurant.restaurant_id} />}
       headerStart={
