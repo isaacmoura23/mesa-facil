@@ -12,13 +12,15 @@ type DesktopSidebarProps = {
   nav: readonly NavEntry[];
   navLabel: string;
   navFooter?: ReactNode;
+  /** Marca do topo (restaurante nos painéis; Mesa Fácil quando ausente). */
+  brand?: { name: string; logoUrl: string | null };
 };
 
 /**
  * Barra lateral flutuante de telas grandes. Recolhe para só ícones (com dica
  * ao passar o mouse). Os itens já chegam filtrados pelas permissões.
  */
-export function DesktopSidebar({ areaLabel, nav, navLabel, navFooter }: DesktopSidebarProps) {
+export function DesktopSidebar({ areaLabel, nav, navLabel, navFooter, brand }: DesktopSidebarProps) {
   const [open, setOpen] = useState(true);
 
   return (
@@ -36,7 +38,7 @@ export function DesktopSidebar({ areaLabel, nav, navLabel, navFooter }: DesktopS
         )}
       >
         <div className={cn("flex shrink-0 items-center", open ? "justify-between" : "flex-col gap-3")}>
-          <BrandMark href="/entrar" compact={!open} />
+          <BrandMark href="/entrar" compact={!open} restaurant={brand} />
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
