@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
+import type { ConfirmationState } from "@/modules/restaurant-settings/confirmation";
+import { ConfirmDataButton } from "./confirm-data-button";
 import { formatCents } from "@/lib/format";
 import { whatsappToInput } from "@/modules/restaurant-profile/format";
 import type { ContactRow } from "@/modules/restaurant-profile/types";
@@ -27,14 +29,30 @@ type Props = {
   zones: ZoneRow[];
   contact: ContactRow | null;
   today: string;
+  timezone: string;
+  confirmation: ConfirmationState;
 };
+
+function formatConfirmedAt(iso: string, timezone: string): string {
+  return new Date(iso).toLocaleString("pt-BR", { timeZone: timezone, dateStyle: "short", timeStyle: "short" });
+}
 
 /**
  * "Confirme os dados do seu cardápio": resumo somente leitura de tudo que o
  * cardápio digital mostra ao cliente e que o dono controla. Cada linha avisa o
  * que está faltando e leva à tela onde se corrige. Não grava nada.
  */
-export function ConfirmDataCard({ slug, settings, hours, exceptions, zones, contact, today }: Props) {
+export function ConfirmDataCard({
+  slug,
+  settings,
+  hours,
+  exceptions,
+  zones,
+  contact,
+  today,
+  timezone,
+  confirmation,
+}: Props) {
   const week = weekFromRows(hours);
   const activeZones = zones.filter((zone) => zone.is_active);
   const types = FULFILLMENT_TYPES.filter((type) => settings.enabled_fulfillment_types.includes(type));
@@ -162,6 +180,23 @@ export function ConfirmDataCard({ slug, settings, hours, exceptions, zones, cont
             . Horários, folgas e taxa de entrega são editados nas seções abaixo.
           </p>
         </section>
+
+        {confirmation.kind !== "unavailable" && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <p role="status" className="text-muted">
+              {confirmation.kind === "none" && "Você ainda não confirmou estes dados."}
+              {confirmation.kind === "current" &&
+                `Confirmado em ${formatConfirmedAt(confirmation.confirmedAt, timezone)}. Nada mudou desde então.`}
+              {confirmation.kind === "outdated" &&
+                `Algo mudou desde a última confirmação (${formatConfirmedAt(confirmation.confirmedAt, timezone)}). Confira e confirme de novo.`}
+            </p>
+            <ConfirmDataButton
+              slug={slug}
+              disabled={contact === null || confirmation.kind === "current"}
+              label={confirmation.kind === "current" ? "Dados confirmados" : "Confirmar que está tudo certo"}
+            />
+          </div>
+        )}
       </div>
     </Card>
   );
