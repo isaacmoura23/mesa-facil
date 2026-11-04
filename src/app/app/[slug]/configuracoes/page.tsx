@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { getRestaurantProfile } from "@/modules/restaurant-profile/queries";
 import { timezoneLabel } from "@/modules/restaurant-profile/timezones";
+import { getConfirmationState, storefrontDataHash } from "@/modules/restaurant-settings/confirmation";
 import { getSettingsPageData } from "@/modules/restaurant-settings/queries";
 
 export const metadata: Metadata = { title: "Configurações" };
@@ -36,6 +37,18 @@ export default async function Page({ params }: PageProps<"/app/[slug]/configurac
   });
   const data = await getSettingsPageData({ restaurantId: restaurant.restaurant_id, slug: restaurant.slug });
   const profile = await getRestaurantProfile(restaurant.restaurant_id);
+  const currentHash =
+    data.settings && data.hours && data.exceptions && data.zones && profile.contact
+      ? storefrontDataHash({
+          settings: data.settings,
+          hours: data.hours,
+          exceptions: data.exceptions,
+          zones: data.zones,
+          contact: profile.contact,
+          today: data.today,
+        })
+      : null;
+  const confirmation = await getConfirmationState(restaurant.restaurant_id, currentHash);
   const deliveryEnabled = data.settings?.enabled_fulfillment_types.includes("DELIVERY") ?? false;
 
   return (
@@ -73,6 +86,8 @@ export default async function Page({ params }: PageProps<"/app/[slug]/configurac
             zones={data.zones}
             contact={profile.contact}
             today={data.today}
+            timezone={data.timezone}
+            confirmation={confirmation}
           />
         ) : null}
 
