@@ -4,7 +4,7 @@ import { useActionState, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { signupAction } from "@/lib/auth/actions";
 import { initialFormState } from "@/lib/auth/form-state";
-import { signupSchema, toFieldErrors, type FieldErrors } from "@/lib/validation/auth";
+import { PASSWORD_HINT, signupSchema, toFieldErrors, type FieldErrors } from "@/lib/validation/auth";
 import { TurnstileWidget } from "@/components/captcha/turnstile-widget";
 import { Alert } from "@/components/ui/alert";
 import { Button, buttonStyles } from "@/components/ui/button";
@@ -76,7 +76,7 @@ export function SignupForm() {
         label="Senha"
         name="password"
         autoComplete="new-password"
-        hint="Mínimo de 8 caracteres, com letras e números."
+        hint={PASSWORD_HINT}
         required
         error={errors.password}
       />

@@ -17,6 +17,20 @@ export const loginSchema = z.object({
     .max(256, "Senha muito longa."),
 });
 
+/** Mesma regra configurada no Supabase Auth (mínimo 10, com minúscula, maiúscula e número): o app avisa antes do servidor recusar. */
+export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_HINT = "Mínimo de 10 caracteres, com letras maiúsculas, minúsculas e números.";
+
+function signupSchemaPassword() {
+  return z
+    .string()
+    .min(PASSWORD_MIN_LENGTH, `A senha precisa ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`)
+    .max(256, "Senha muito longa.")
+    .regex(/[a-z]/, "Use ao menos uma letra minúscula.")
+    .regex(/[A-Z]/, "Use ao menos uma letra maiúscula.")
+    .regex(/[0-9]/, "Use ao menos um número.");
+}
+
 export const signupSchema = z
   .object({
     fullName: z
@@ -25,12 +39,7 @@ export const signupSchema = z
       .min(2, "Informe seu nome.")
       .max(120, "Nome muito longo."),
     email,
-    password: z
-      .string()
-      .min(8, "A senha precisa ter pelo menos 8 caracteres.")
-      .max(256, "Senha muito longa.")
-      .regex(/[A-Za-z]/, "Use ao menos uma letra.")
-      .regex(/[0-9]/, "Use ao menos um número."),
+    password: signupSchemaPassword(),
     confirmPassword: z.string().min(1, "Repita a senha."),
   })
   .refine((value) => value.password === value.confirmPassword, {
@@ -94,11 +103,3 @@ export const resetPasswordSchema = z
     message: "As senhas não conferem.",
   });
 
-function signupSchemaPassword() {
-  return z
-    .string()
-    .min(8, "A senha precisa ter pelo menos 8 caracteres.")
-    .max(256, "Senha muito longa.")
-    .regex(/[A-Za-z]/, "Use ao menos uma letra.")
-    .regex(/[0-9]/, "Use ao menos um número.");
-}
