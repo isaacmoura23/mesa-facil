@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { AcceptsOrdersCard } from "@/components/restaurant-settings/accepts-orders-card";
+import { ConfirmDataCard } from "@/components/restaurant-settings/confirm-data-card";
 import { CustomerPreview } from "@/components/restaurant-settings/customer-preview";
 import { ExceptionsManager } from "@/components/restaurant-settings/exceptions-manager";
 import { HoursEditor } from "@/components/restaurant-settings/hours-editor";
@@ -11,6 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { buttonStyles } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
+import { getRestaurantProfile } from "@/modules/restaurant-profile/queries";
 import { timezoneLabel } from "@/modules/restaurant-profile/timezones";
 import { getSettingsPageData } from "@/modules/restaurant-settings/queries";
 
@@ -33,6 +35,7 @@ export default async function Page({ params }: PageProps<"/app/[slug]/configurac
     permission: "restaurant.settings.manage",
   });
   const data = await getSettingsPageData({ restaurantId: restaurant.restaurant_id, slug: restaurant.slug });
+  const profile = await getRestaurantProfile(restaurant.restaurant_id);
   const deliveryEnabled = data.settings?.enabled_fulfillment_types.includes("DELIVERY") ?? false;
 
   return (
@@ -60,6 +63,18 @@ export default async function Page({ params }: PageProps<"/app/[slug]/configurac
           Cada seção tem o seu botão de salvar. Ao salvar, a vitrine e a API passam a usar os novos valores para
           os próximos pedidos. Pedidos já feitos guardam os valores da época e não são alterados.
         </Alert>
+
+        {data.settings && data.hours && data.exceptions && data.zones ? (
+          <ConfirmDataCard
+            slug={restaurant.slug}
+            settings={data.settings}
+            hours={data.hours}
+            exceptions={data.exceptions}
+            zones={data.zones}
+            contact={profile.contact}
+            today={data.today}
+          />
+        ) : null}
 
         {data.settings ? (
           <AcceptsOrdersCard
