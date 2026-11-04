@@ -35,7 +35,7 @@ function rpcMessage(raw: string): string {
 
 export async function getDashboardMetrics(
   restaurantId: string,
-  period: ResolvedPeriod,
+  period: Pick<ResolvedPeriod, "fromIso" | "toIso">,
 ): Promise<Result<DashboardMetrics>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("dashboard_metrics", {

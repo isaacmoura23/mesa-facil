@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_TIMEZONE, MAX_PERIOD_DAYS, PERIOD_PRESETS, isPeriodPreset, resolvePeriod } from "@/lib/period";
-import { describePeriod, firstParam, periodFromParams, periodQuery } from "@/modules/dashboard/period-params";
+import { comparisonLabel, describePeriod, firstParam, periodFromParams, periodQuery, previousPeriod } from "@/modules/dashboard/period-params";
 import { formatAxisCents, longDay, niceScale, shortDay } from "@/modules/dashboard/chart-math";
 import {
   CSV_MAX_ROWS,
@@ -243,5 +243,35 @@ describe("dashboard/orders: filtros, cursor e CSV", () => {
 
   it("F-48: paymentMethodName('constructor') devolve uma FUNÇÃO (Object.prototype) em vez de 'Outra forma' (mesma classe de F-19/F-39)", () => {
     for (const k of ["constructor", "toString", "__proto__"]) expect(paymentMethodName(k)).toBe("Outra forma");
+  });
+});
+
+describe("previousPeriod: período anterior com o mesmo tamanho", () => {
+  const tz = "America/Sao_Paulo";
+  const now = at("2026-03-10T15:00:00Z");
+
+  it("hoje compara com ontem", () => {
+    const prev = previousPeriod(p({ preset: "today", timezone: tz, now }));
+    expect(prev).toMatchObject({ fromDate: "2026-03-09", toDate: "2026-03-09" });
+    expect(prev?.fromIso).toBe("2026-03-09T03:00:00.000Z");
+    expect(prev?.toIso).toBe("2026-03-10T03:00:00.000Z");
+  });
+
+  it("7 dias comparam com os 7 dias imediatamente antes, sem sobreposição", () => {
+    const cur = p({ preset: "7d", timezone: tz, now });
+    const prev = previousPeriod(cur);
+    expect(cur).toMatchObject({ fromDate: "2026-03-04", toDate: "2026-03-10" });
+    expect(prev).toMatchObject({ fromDate: "2026-02-25", toDate: "2026-03-03" });
+    expect(prev?.toIso).toBe(cur.fromIso);
+  });
+
+  it("atravessa virada de ano", () => {
+    const cur = p({ preset: "custom", timezone: tz, from: "2026-01-01", to: "2026-01-03" });
+    expect(previousPeriod(cur)).toMatchObject({ fromDate: "2025-12-29", toDate: "2025-12-31" });
+  });
+
+  it("texto da comparação", () => {
+    expect(comparisonLabel(p({ preset: "today", timezone: tz, now }))).toBe("o dia anterior");
+    expect(comparisonLabel(p({ preset: "7d", timezone: tz, now }))).toBe("o período anterior");
   });
 });

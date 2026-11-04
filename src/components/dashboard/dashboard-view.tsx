@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
-import { ChartColumn } from "lucide-react";
-import { Alert } from "@/components/ui/alert";
+import Link from "next/link";
+import { ChartColumn, TrendingDown, TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatCents } from "@/lib/format";
+import { cn } from "@/lib/utils/cn";
 import { paymentMethodName, type DashboardMetrics } from "@/modules/dashboard/types";
 import { FULFILLMENT_LABELS, type FulfillmentType } from "@/modules/operations/types";
 import { BarList, type BarItem } from "./bar-list";
@@ -29,37 +31,95 @@ const FULFILLMENT_COLORS: Record<FulfillmentType, string> = {
 const integer = new Intl.NumberFormat("pt-BR");
 const percent = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
-function Stat({
+/**
+ * Variação contra o período anterior. Sem período anterior (ou sem base para
+ * comparar) não mostra percentual: nada de número inventado.
+ */
+function Delta({
+  current,
+  previous,
+  comparedTo,
+}: {
+  current: number;
+  previous: number | null;
+  comparedTo: string;
+}) {
+  if (previous === null) return null;
+  if (previous <= 0) {
+    return current > 0 ? <p className="mt-2 text-xs text-muted">Sem vendas em {comparedTo} para comparar.</p> : null;
+  }
+  const pct = ((current - previous) / previous) * 100;
+  if (Math.abs(pct) < 0.05) {
+    return <p className="mt-2 text-xs text-muted">Igual a {comparedTo}.</p>;
+  }
+  const up = pct > 0;
+  const Icon = up ? TrendingUp : TrendingDown;
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+      <Badge tone={up ? "accent" : "danger"}>
+        <Icon aria-hidden="true" className="mr-1 size-3.5" />
+        {up ? "+" : "-"}
+        {percent.format(Math.abs(pct))}%
+      </Badge>
+      <span>{up ? "a mais" : "a menos"} que {comparedTo}</span>
+    </p>
+  );
+}
+
+function Tile({
   label,
   value,
   hint,
-  large,
-  className,
+  tone = "default",
+  href,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
-  large?: boolean;
-  className?: string;
+  tone?: "default" | "attention";
+  href?: string;
 }) {
-  return (
-    <div className={className}>
+  const body = (
+    <>
       <dt className="text-sm text-muted">{label}</dt>
-      <dd
-        className={
-          large
-            ? "mt-1 text-3xl font-semibold tracking-tight tabular-nums text-fg sm:text-4xl"
-            : "mt-1 text-2xl font-semibold tabular-nums text-fg"
-        }
-      >
-        {value}
-      </dd>
+      <dd className="mt-1 text-3xl font-semibold tabular-nums text-fg">{value}</dd>
       {hint ? <dd className="mt-1 text-xs leading-relaxed text-muted">{hint}</dd> : null}
+    </>
+  );
+  const box = cn(
+    "block rounded-card border p-4",
+    tone === "attention" ? "border-transparent bg-warning-soft [&_*]:!text-warning-soft-fg" : "border-line bg-surface",
+  );
+  return href ? (
+    <Link href={href} className={cn(box, "transition-colors hover:border-line-strong")}>
+      {body}
+    </Link>
+  ) : (
+    <div className={box}>{body}</div>
+  );
+}
+
+function MiniStat({ label, value, children }: { label: string; value: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="rounded-card border border-line bg-surface p-4">
+      <dt className="text-sm text-muted">{label}</dt>
+      <dd className="mt-1 text-2xl font-semibold tabular-nums text-fg">{value}</dd>
+      {children}
     </div>
   );
 }
 
-export function DashboardView({ metrics }: { metrics: DashboardMetrics }) {
+export function DashboardView({
+  metrics,
+  previous,
+  comparedTo,
+  ordersHref,
+}: {
+  metrics: DashboardMetrics;
+  previous: DashboardMetrics | null;
+  comparedTo: string;
+  ordersHref: string;
+}) {
   const m = metrics;
   const hasOrders = m.orders_count > 0;
 
@@ -94,43 +154,25 @@ export function DashboardView({ metrics }: { metrics: DashboardMetrics }) {
     <div className="viz-root flex flex-col gap-6">
       <style>{VIZ_STYLE}</style>
 
-      <Alert tone="info" title="Faturamento não é lucro">
-        Os valores abaixo são vendas registradas, sem descontar custos de ingredientes, equipe ou taxas. Pedidos
-        cancelados e recusados não entram nas vendas.
-      </Alert>
-
-      <Card aria-labelledby="kpi-periodo">
-        <CardHeader as="h2" title={<span id="kpi-periodo">No período</span>} description="Pedidos criados dentro do período escolhido." />
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
-          <Stat
-            large
-            className="col-span-2 lg:col-span-2"
-            label="Vendas brutas"
-            value={formatCents(m.gross_sales_cents)}
-            hint={`${integer.format(m.gross_orders_count)} ${m.gross_orders_count === 1 ? "pedido" : "pedidos"} sem cancelados e recusados`}
+      <section aria-labelledby="kpi-agora">
+        <h2 id="kpi-agora" className="mb-1 text-base font-semibold text-fg">
+          Agora
+        </h2>
+        <p className="mb-3 text-sm text-muted">Situação atual da operação. Não depende do período escolhido.</p>
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Tile
+            label="Pedidos em andamento"
+            value={integer.format(m.in_progress_orders)}
+            hint={
+              m.in_progress_orders > 0
+                ? "Toque para ver e atender os pedidos"
+                : "Novos, em preparo, prontos ou em entrega"
+            }
+            tone={m.in_progress_orders > 0 ? "attention" : "default"}
+            href={ordersHref}
           />
-          <Stat label="Pedidos" value={integer.format(m.orders_count)} hint="Todos os estados" />
-          <Stat label="Ticket médio" value={formatCents(m.avg_ticket_cents)} hint="Vendas brutas por pedido" />
-          <Stat
-            label="Vendas concluídas"
-            value={formatCents(m.completed_sales_cents)}
-            hint="Somente pedidos concluídos"
-          />
-          <Stat label="Cancelados" value={integer.format(m.cancelled_count)} />
-          <Stat label="Recusados" value={integer.format(m.rejected_count)} />
-        </dl>
-      </Card>
-
-      <Card aria-labelledby="kpi-agora">
-        <CardHeader
-          as="h2"
-          title={<span id="kpi-agora">Agora</span>}
-          description="Situação atual da operação. Não depende do período escolhido."
-        />
-        <dl className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <Stat label="Pedidos em andamento" value={integer.format(m.in_progress_orders)} hint="Novos, em preparo, prontos ou em entrega" />
-          <Stat label="Comandas abertas" value={integer.format(m.open_tabs)} />
-          <Stat
+          <Tile label="Comandas abertas" value={integer.format(m.open_tabs)} hint="Atendimento no salão" />
+          <Tile
             label="Mesas ocupadas"
             value={
               <>
@@ -141,66 +183,112 @@ export function DashboardView({ metrics }: { metrics: DashboardMetrics }) {
             hint="Mesas ativas do salão"
           />
         </dl>
-      </Card>
+      </section>
 
-      <Card aria-labelledby="chart-vendas">
-        <CardHeader
-          as="h2"
-          title={<span id="chart-vendas">Vendas por dia</span>}
-          description="Vendas brutas por dia, no horário do restaurante."
-        />
-        {hasOrders ? (
-          <SalesChart series={m.sales_series} />
-        ) : (
-          <EmptyState
-            icon={<ChartColumn />}
-            title="Nenhum pedido neste período"
-            description="Escolha outro período para ver as vendas por dia. Os pedidos aparecem aqui assim que forem criados."
-            className="border-0 py-8"
+      <section aria-labelledby="kpi-periodo" className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <h2 id="kpi-periodo" className="sr-only">
+          No período
+        </h2>
+        <Card>
+          <CardHeader
+            as="h3"
+            title="Vendas brutas"
+            description="Sem pedidos cancelados e recusados, no período escolhido."
           />
-        )}
-      </Card>
+          <p className="text-4xl font-semibold tracking-tight tabular-nums text-fg sm:text-5xl">
+            {formatCents(m.gross_sales_cents)}
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            {integer.format(m.gross_orders_count)} {m.gross_orders_count === 1 ? "pedido" : "pedidos"}
+          </p>
+          <Delta
+            current={m.gross_sales_cents}
+            previous={previous ? previous.gross_sales_cents : null}
+            comparedTo={comparedTo}
+          />
+          <div className="mt-6">
+            {hasOrders ? (
+              <SalesChart series={m.sales_series} />
+            ) : (
+              <EmptyState
+                icon={<ChartColumn />}
+                title="Nenhum pedido neste período"
+                description="Escolha outro período para ver as vendas por dia. Os pedidos aparecem aqui assim que forem criados."
+                className="border-0 py-8"
+              />
+            )}
+          </div>
+        </Card>
+
+        <dl className="grid grid-cols-2 content-start gap-3 lg:grid-cols-1">
+          <MiniStat label="Pedidos" value={integer.format(m.orders_count)}>
+            <Delta
+              current={m.orders_count}
+              previous={previous ? previous.orders_count : null}
+              comparedTo={comparedTo}
+            />
+          </MiniStat>
+          <MiniStat label="Ticket médio" value={formatCents(m.avg_ticket_cents)}>
+            <p className="mt-1 text-xs text-muted">Vendas brutas por pedido</p>
+          </MiniStat>
+          <MiniStat label="Vendas concluídas" value={formatCents(m.completed_sales_cents)}>
+            <p className="mt-1 text-xs text-muted">Somente pedidos concluídos</p>
+          </MiniStat>
+          <MiniStat label="Cancelados e recusados" value={integer.format(m.cancelled_count + m.rejected_count)}>
+            <p className="mt-1 text-xs text-muted">
+              {integer.format(m.cancelled_count)} cancelados · {integer.format(m.rejected_count)} recusados
+            </p>
+          </MiniStat>
+        </dl>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card aria-labelledby="chart-modalidade">
+        <Card aria-labelledby="chart-produtos">
           <CardHeader
             as="h2"
-            title={<span id="chart-modalidade">Vendas por modalidade</span>}
-            description="Entrega, retirada e consumo no local."
+            title={<span id="chart-produtos">Produtos mais vendidos</span>}
+            description="Os 10 itens com maior valor vendido no período, por variante."
           />
-          {hasOrders ? (
-            <BarList items={fulfillmentItems} label="Vendas por modalidade" />
+          {productItems.length > 0 ? (
+            <BarList items={productItems} label="Produtos mais vendidos" />
           ) : (
-            <p className="text-sm text-muted">Sem pedidos no período.</p>
+            <p className="text-sm text-muted">Nenhum item vendido no período.</p>
           )}
         </Card>
 
-        <Card aria-labelledby="chart-pagamento">
-          <CardHeader
-            as="h2"
-            title={<span id="chart-pagamento">Formas de pagamento registradas</span>}
-            description="Pagamentos registrados pela equipe no período (pela data do pagamento)."
-          />
-          {paymentItems.length > 0 ? (
-            <BarList items={paymentItems} label="Pagamentos registrados por forma" />
-          ) : (
-            <p className="text-sm text-muted">Nenhum pagamento registrado no período.</p>
-          )}
-        </Card>
+        <div className="flex flex-col gap-6">
+          <Card aria-labelledby="chart-modalidade">
+            <CardHeader
+              as="h2"
+              title={<span id="chart-modalidade">Como o cliente pediu</span>}
+              description="Vendas por modalidade: entrega, retirada e consumo no local."
+            />
+            {hasOrders ? (
+              <BarList items={fulfillmentItems} label="Vendas por modalidade" />
+            ) : (
+              <p className="text-sm text-muted">Sem pedidos no período.</p>
+            )}
+          </Card>
+
+          <Card aria-labelledby="chart-pagamento">
+            <CardHeader
+              as="h2"
+              title={<span id="chart-pagamento">Formas de pagamento registradas</span>}
+              description="Pagamentos registrados pela equipe no período (pela data do pagamento)."
+            />
+            {paymentItems.length > 0 ? (
+              <BarList items={paymentItems} label="Pagamentos registrados por forma" />
+            ) : (
+              <p className="text-sm text-muted">Nenhum pagamento registrado no período.</p>
+            )}
+          </Card>
+        </div>
       </div>
 
-      <Card aria-labelledby="chart-produtos">
-        <CardHeader
-          as="h2"
-          title={<span id="chart-produtos">Produtos mais vendidos</span>}
-          description="Os 10 itens com maior valor vendido no período, por variante."
-        />
-        {productItems.length > 0 ? (
-          <BarList items={productItems} label="Produtos mais vendidos" />
-        ) : (
-          <p className="text-sm text-muted">Nenhum item vendido no período.</p>
-        )}
-      </Card>
+      <p className="text-xs text-muted">
+        Faturamento não é lucro: os valores são vendas registradas, sem descontar custos de ingredientes, equipe ou
+        taxas. Pedidos cancelados e recusados não entram nas vendas.
+      </p>
     </div>
   );
 }

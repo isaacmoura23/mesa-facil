@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireRestaurantAccess } from "@/lib/auth/guards";
 import { STATUS_LABELS } from "@/lib/auth/permissions";
-import { describePeriod, periodFromParams } from "@/modules/dashboard/period-params";
+import { comparisonLabel, describePeriod, periodFromParams, previousPeriod } from "@/modules/dashboard/period-params";
 import { getDashboardMetrics, getRestaurantTimezone } from "@/modules/dashboard/queries";
 import { formatTimeTz } from "@/modules/dashboard/orders";
 
@@ -21,7 +21,11 @@ export default async function Page({ params, searchParams }: PageProps<"/app/[sl
 
   const timezone = await getRestaurantTimezone(restaurant.restaurant_id);
   const period = periodFromParams(query, timezone, "7d");
-  const result = await getDashboardMetrics(restaurant.restaurant_id, period);
+  const previous = previousPeriod(period);
+  const [result, previousResult] = await Promise.all([
+    getDashboardMetrics(restaurant.restaurant_id, period),
+    previous ? getDashboardMetrics(restaurant.restaurant_id, previous) : Promise.resolve(null),
+  ]);
   const now = new Date();
 
   return (
@@ -45,7 +49,12 @@ export default async function Page({ params, searchParams }: PageProps<"/app/[sl
       />
 
       {result.ok ? (
-        <DashboardView metrics={result.data} />
+        <DashboardView
+          metrics={result.data}
+          previous={previousResult?.ok ? previousResult.data : null}
+          comparedTo={comparisonLabel(period)}
+          ordersHref={`/app/${restaurant.slug}/pedidos`}
+        />
       ) : (
         <Alert tone="danger" title="Não foi possível carregar os indicadores">
           {result.message}
