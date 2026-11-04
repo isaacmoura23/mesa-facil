@@ -13,12 +13,19 @@ describe.skipIf(!mod)("schemas de autenticação / cadastro de restaurante", () 
   });
 
   it("signup: senha forte, confirmação igual e nome mínimo", () => {
-    const base = { fullName: "Maria Silva", email: "maria@example.test", password: "senha1234", confirmPassword: "senha1234" };
+    const pw = (password: string) => ({ fullName: "Maria Silva", email: "maria@example.test", password, confirmPassword: password });
+    const base = pw("Senha12345");
     expect(signupSchema.safeParse(base).success).toBe(true);
-    expect(signupSchema.safeParse({ ...base, password: "curta1", confirmPassword: "curta1" }).success).toBe(false);
-    expect(signupSchema.safeParse({ ...base, password: "somenteletras", confirmPassword: "somenteletras" }).success).toBe(false);
-    expect(signupSchema.safeParse({ ...base, password: "12345678", confirmPassword: "12345678" }).success).toBe(false);
-    const mismatch = signupSchema.safeParse({ ...base, confirmPassword: "outra1234" });
+    // Senha longa só com letras e números, sem símbolo (como as geradas para a equipe), continua valendo.
+    expect(signupSchema.safeParse(pw("Abcdefghij1234Xy")).success).toBe(true);
+    expect(signupSchema.safeParse(pw("Curta1")).success).toBe(false); // menos de 10
+    expect(signupSchema.safeParse(pw("Senha1234")).success).toBe(false); // 9 caracteres
+    expect(signupSchema.safeParse(pw("somenteletrasminusculas")).success).toBe(false);
+    expect(signupSchema.safeParse(pw("sem1maiuscula23")).success).toBe(false);
+    expect(signupSchema.safeParse(pw("SEM1MINUSCULA23")).success).toBe(false);
+    expect(signupSchema.safeParse(pw("SemNumeroNenhum")).success).toBe(false);
+    expect(signupSchema.safeParse(pw("1234567890")).success).toBe(false);
+    const mismatch = signupSchema.safeParse({ ...base, confirmPassword: "Outra12345" });
     expect(mismatch.success).toBe(false);
     if (!mismatch.success) expect(toFieldErrors(mismatch.error)).toHaveProperty("confirmPassword");
     expect(signupSchema.safeParse({ ...base, fullName: "A" }).success).toBe(false);

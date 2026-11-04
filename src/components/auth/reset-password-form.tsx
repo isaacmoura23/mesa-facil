@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { resetPasswordSchema, toFieldErrors, type FieldErrors } from "@/lib/validation/auth";
+import { PASSWORD_HINT, resetPasswordSchema, toFieldErrors, type FieldErrors } from "@/lib/validation/auth";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PasswordField } from "./password-field";
@@ -63,7 +63,7 @@ export function ResetPasswordForm() {
         label="Nova senha"
         name="password"
         autoComplete="new-password"
-        hint="Mínimo de 8 caracteres, com letras e números."
+        hint={PASSWORD_HINT}
         required
         error={errors.password}
       />
