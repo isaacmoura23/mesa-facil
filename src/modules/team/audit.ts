@@ -86,6 +86,7 @@ const DESCRIBERS: Record<string, Describe> = {
   "member.invitation_accepted": (m) => `Convite aceito (função: ${roleName(m.role)})`,
   "member.role_changed": (m) => `Alterou a função de ${roleName(m.from)} para ${roleName(m.to)}`,
   "member.revoked": (m) => `Revogou o acesso de um integrante (${roleName(m.role)})`,
+  "member.reactivated": (m) => `Reativou o acesso de um integrante (${roleName(m.role)})`,
   "member.permission_changed": (m) =>
     `${m.granted === true ? "Concedeu" : "Removeu"} a permissão "${permissionName(m.permission)}" (${roleName(m.role)})`,
   "order.staff_created": () => "Criou um pedido pela equipe",

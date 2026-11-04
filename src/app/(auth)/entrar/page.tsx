@@ -7,7 +7,7 @@ import { getPublicEnvStatus } from "@/lib/env";
 import { logoutAction } from "@/lib/auth/actions";
 import { requireUser } from "@/lib/auth/guards";
 import { homePathFor, ROLE_LABELS, STATUS_LABELS } from "@/lib/auth/permissions";
-import { getMyRestaurants, getPendingInvitations, isPlatformAdmin } from "@/lib/auth/rpc";
+import { getMyRestaurants, getMyRevokedRestaurants, getPendingInvitations, isPlatformAdmin } from "@/lib/auth/rpc";
 import type { MyRestaurant } from "@/lib/auth/types";
 import { AcceptInvitationForm } from "@/components/auth/accept-invitation-form";
 import { AuthShell, AuthSkeleton } from "@/components/auth/auth-shell";
@@ -63,6 +63,8 @@ async function EnterContent({
     getMyRestaurants(),
     getPendingInvitations(),
   ]);
+
+  const revoked = restaurants.length === 0 ? await getMyRevokedRestaurants() : [];
 
   const [only] = restaurants;
   if (invitations.length === 0 && restaurants.length === 1 && only.status === "active") {
@@ -144,6 +146,13 @@ async function EnterContent({
         </Card>
       ) : (
         <>
+          {revoked.length > 0 ? (
+            <Alert tone="warning" className="mb-6" title="Acesso encerrado">
+              {revoked.length === 1
+                ? `Você não faz mais parte da equipe de ${revoked[0].name}. Se foi um engano, peça ao responsável para te convidar de novo.`
+                : `Você não faz mais parte da equipe de: ${revoked.map((item) => item.name).join(", ")}. Se foi um engano, peça ao responsável para te convidar de novo.`}
+            </Alert>
+          ) : null}
           {invitations.length === 0 ? (
           <Card aria-labelledby="titulo-aguardando">
             <span

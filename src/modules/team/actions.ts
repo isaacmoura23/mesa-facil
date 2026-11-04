@@ -46,6 +46,8 @@ async function mailNotice(restaurantId: string, email: string): Promise<string> 
 
 const EXTRA_MESSAGES: Record<string, string> = {
   invalid_granted: "Valor de permissão inválido.",
+  not_revoked: "Este acesso não está revogado. Atualize a página.",
+  no_account: "Esta pessoa nunca aceitou o convite. Use \"Convidar de novo\".",
 };
 
 async function authorize(slug: string): Promise<Authorization> {
@@ -127,6 +129,19 @@ export async function resendInviteAction(slug: string, membershipId: string): Pr
   if (error) return failure(error);
   revalidateTeam(ctx);
   return { ok: true, message: "Convite renovado", warning: await mailNotice(ctx.restaurantId, email) };
+}
+
+/** Devolve o acesso de quem foi revogado (mesmo papel, permissões padrão do papel). */
+export async function reactivateMemberAction(slug: string, membershipId: string): Promise<ActionResult> {
+  const auth = await authorize(slug);
+  if (!auth.ok) return auth.result;
+  const id = membershipIdSchema.safeParse(membershipId);
+  if (!id.success) return { ok: false, message: id.error.issues[0].message };
+  const { ctx } = auth;
+  const { error } = await ctx.supabase.rpc("reactivate_member", { p_membership: id.data });
+  if (error) return failure(error);
+  revalidateTeam(ctx);
+  return { ok: true, message: "Acesso reativado. A pessoa já pode entrar de novo." };
 }
 
 export async function changeMemberRoleAction(slug: string, membershipId: string, role: string): Promise<ActionResult> {

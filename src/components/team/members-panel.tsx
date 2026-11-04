@@ -8,7 +8,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-import { resendInviteAction, revokeMemberAction } from "@/modules/team/actions";
+import { reactivateMemberAction, resendInviteAction, revokeMemberAction } from "@/modules/team/actions";
 import { formatDate, formatDateTime } from "@/modules/team/audit";
 import type { TeamMember } from "@/modules/team/types";
 import { InviteDialog } from "./invite-dialog";
@@ -63,6 +63,17 @@ export function MembersPanel({ slug, restaurantName, members, currentUserId }: M
       tone: "danger",
       onConfirm: async () => {
         await run(() => revokeMemberAction(slug, member.membership_id), { key: member.membership_id });
+      },
+    });
+  }
+
+  function reactivate(member: TeamMember) {
+    confirm({
+      title: "Reativar o acesso?",
+      description: `${displayName(member)} volta como ${roleLabel(member.role)}, com as permissões padrão dessa função. Ajustes de permissão antigos não voltam.`,
+      confirmLabel: "Reativar acesso",
+      onConfirm: async () => {
+        await run(() => reactivateMemberAction(slug, member.membership_id), { key: member.membership_id });
       },
     });
   }
@@ -220,9 +231,16 @@ export function MembersPanel({ slug, restaurantName, members, currentUserId }: M
                     {displayEmail(member) ?? "E-mail indisponível"} - {roleLabel(member.role)}
                   </p>
                 </div>
-                <Button size="sm" variant="secondary" loading={isBusy(member.membership_id)} onClick={() => void resend(member)}>
-                  Convidar de novo
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {member.user_id ? (
+                    <Button size="sm" loading={isBusy(member.membership_id)} onClick={() => reactivate(member)}>
+                      Reativar
+                    </Button>
+                  ) : null}
+                  <Button size="sm" variant="secondary" disabled={isBusy(member.membership_id)} onClick={() => void resend(member)}>
+                    Convidar de novo
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
