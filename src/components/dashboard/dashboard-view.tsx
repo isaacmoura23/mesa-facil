@@ -46,11 +46,11 @@ function Delta({
 }) {
   if (previous === null) return null;
   if (previous <= 0) {
-    return current > 0 ? <p className="mt-2 text-xs text-muted">Sem vendas em {comparedTo} para comparar.</p> : null;
+    return current > 0 ? <p className="mt-2 text-xs text-muted">Sem registros no período anterior para comparar.</p> : null;
   }
   const pct = ((current - previous) / previous) * 100;
   if (Math.abs(pct) < 0.05) {
-    return <p className="mt-2 text-xs text-muted">Igual a {comparedTo}.</p>;
+    return <p className="mt-2 text-xs text-muted">Igual {comparedTo}.</p>;
   }
   const up = pct > 0;
   const Icon = up ? TrendingUp : TrendingDown;
@@ -61,7 +61,9 @@ function Delta({
         {up ? "+" : "-"}
         {percent.format(Math.abs(pct))}%
       </Badge>
-      <span>{up ? "a mais" : "a menos"} que {comparedTo}</span>
+      <span>
+        {up ? "a mais" : "a menos"} em relação {comparedTo}
+      </span>
     </p>
   );
 }
@@ -79,23 +81,34 @@ function Tile({
   tone?: "default" | "attention";
   href?: string;
 }) {
-  const body = (
-    <>
-      <dt className="text-sm text-muted">{label}</dt>
-      <dd className="mt-1 text-3xl font-semibold tabular-nums text-fg">{value}</dd>
-      {hint ? <dd className="mt-1 text-xs leading-relaxed text-muted">{hint}</dd> : null}
-    </>
-  );
-  const box = cn(
-    "block rounded-card border p-4",
-    tone === "attention" ? "border-transparent bg-warning-soft [&_*]:!text-warning-soft-fg" : "border-line bg-surface",
-  );
-  return href ? (
-    <Link href={href} className={cn(box, "transition-colors hover:border-line-strong")}>
-      {body}
-    </Link>
-  ) : (
-    <div className={box}>{body}</div>
+  const attention = tone === "attention";
+  // O link vai dentro do <dd> e se estende por todo o cartão, mantendo <dl> válido.
+  const hintNode =
+    hint && href ? (
+      <Link href={href} className="after:absolute after:inset-0 after:rounded-card">
+        {hint}
+      </Link>
+    ) : (
+      hint
+    );
+  return (
+    <div
+      className={cn(
+        "relative rounded-card border p-4",
+        attention ? "border-transparent bg-warning-soft" : "border-line bg-surface",
+        href && "transition-colors hover:border-line-strong",
+      )}
+    >
+      <dt className={cn("text-sm", attention ? "text-warning-soft-fg" : "text-muted")}>{label}</dt>
+      <dd className={cn("mt-1 text-3xl font-semibold tabular-nums", attention ? "text-warning-soft-fg" : "text-fg")}>
+        {value}
+      </dd>
+      {hintNode ? (
+        <dd className={cn("mt-1 text-xs leading-relaxed", attention ? "text-warning-soft-fg" : "text-muted")}>
+          {hintNode}
+        </dd>
+      ) : null}
+    </div>
   );
 }
 

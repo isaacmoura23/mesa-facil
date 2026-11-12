@@ -250,11 +250,11 @@ describe("previousPeriod: período anterior com o mesmo tamanho", () => {
   const tz = "America/Sao_Paulo";
   const now = at("2026-03-10T15:00:00Z");
 
-  it("hoje compara com ontem", () => {
-    const prev = previousPeriod(p({ preset: "today", timezone: tz, now }));
-    expect(prev).toMatchObject({ fromDate: "2026-03-09", toDate: "2026-03-09" });
-    expect(prev?.fromIso).toBe("2026-03-09T03:00:00.000Z");
-    expect(prev?.toIso).toBe("2026-03-10T03:00:00.000Z");
+  it("um dia compara com o dia anterior", () => {
+    const prev = previousPeriod(p({ preset: "yesterday", timezone: tz, now }));
+    expect(prev).toMatchObject({ fromDate: "2026-03-08", toDate: "2026-03-08" });
+    expect(prev?.fromIso).toBe("2026-03-08T03:00:00.000Z");
+    expect(prev?.toIso).toBe("2026-03-09T03:00:00.000Z");
   });
 
   it("7 dias comparam com os 7 dias imediatamente antes, sem sobreposição", () => {
@@ -271,7 +271,12 @@ describe("previousPeriod: período anterior com o mesmo tamanho", () => {
   });
 
   it("texto da comparação", () => {
-    expect(comparisonLabel(p({ preset: "today", timezone: tz, now }))).toBe("o dia anterior");
-    expect(comparisonLabel(p({ preset: "7d", timezone: tz, now }))).toBe("o período anterior");
+    expect(comparisonLabel(p({ preset: "today", timezone: tz, now }))).toBe("ao dia anterior");
+    expect(comparisonLabel(p({ preset: "7d", timezone: tz, now }))).toBe("ao período anterior");
+  });
+
+  it("não compara períodos em andamento (hoje e este mês)", () => {
+    expect(previousPeriod(p({ preset: "today", timezone: tz, now }))).toBeNull();
+    expect(previousPeriod(p({ preset: "month", timezone: tz, now }))).toBeNull();
   });
 });
