@@ -41,9 +41,11 @@ function utcDay(ymd: string): number {
 /**
  * Período imediatamente anterior, com o mesmo número de dias (ex.: 7 dias atrás
  * dos últimos 7 dias; "ontem" para "hoje"). Devolve null se não couber no limite
- * de 366 dias do banco.
+ * de 366 dias do banco. Também devolve null para "hoje" e "este mês": o período
+ * ainda está em andamento e compará-lo com um período inteiro daria uma queda falsa.
  */
 export function previousPeriod(period: ResolvedPeriod): ResolvedPeriod | null {
+  if (period.preset === "today" || period.preset === "month") return null;
   const first = utcDay(period.fromDate);
   const days = Math.round((utcDay(period.toDate) - first) / DAY_MS) + 1;
   const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -56,9 +58,9 @@ export function previousPeriod(period: ResolvedPeriod): ResolvedPeriod | null {
   return previous.fellBack ? null : previous;
 }
 
-/** Texto da comparação: "ontem" quando o período é um único dia, senão "período anterior". */
+/** Texto da comparação: "ao dia anterior" quando o período é um único dia, senão "ao período anterior". */
 export function comparisonLabel(period: ResolvedPeriod): string {
-  return period.fromDate === period.toDate ? "o dia anterior" : "o período anterior";
+  return period.fromDate === period.toDate ? "ao dia anterior" : "ao período anterior";
 }
 
 const shortDate = (ymd: string) => ymd.split("-").reverse().join("/");
